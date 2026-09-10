@@ -1,1152 +1,790 @@
-# ECDAT — Exact Work Division
+# ECDAT — Exact 4-Person Work Division
 
 **Project:** Enterprise Cryptographic Discovery & Analysis Tool (ECDAT)  
 **Problem Statement:** SIH26164  
-**Team Size:** 4 people  
-**Prototype Window:** 5–6 days  
-**Source of Truth:** `SRS.md` and `SYSTEM_DESIGN.md`
+**Team:** Rishi, Arnav, Shubh, Rachit  
+**Implementation Window:** 5–6 days  
+**Source of Truth:** `SRS.md` + `SYSTEM_DESIGN.md`
 
 ---
 
 ## 1. Division Principle
 
-The team should be divided by **system boundary**, not by isolated features. Each person owns one major layer and is responsible for making that layer production-quality enough for the prototype.
-
-The four ownership areas are:
+The project is divided into four **independently implementable core ownership areas** with clearly defined interfaces.
 
 ```text
-Person 1 → Discovery & Detection
-Person 2 → Risk & Recommendation Intelligence
-Person 3 → Backend, Persistence & Integration
-Person 4 → Frontend & Presentation
+                     ┌─────────────────────┐
+                     │   Asset Intake/API   │
+                     └──────────┬──────────┘
+                                │
+             ┌──────────────────┼──────────────────┐
+             ↓                  ↓                  ↓
+       Source Scanner     Asset Scanners      Intelligence
+       (Arnav)             (Rachit)             (Shubh)
+             │                  │                  │
+             └──────────────────┼──────────────────┘
+                                ↓
+                    Normalization + CBOM
+                           (Rishi)
+                                │
+                                ↓
+                         Risk / Recommendations
+                             (Shubh)
+                                │
+                                ↓
+                         API + Frontend
+                    (shared secondary work)
 ```
 
-The common integration contract is:
-
-```text
-                    ┌──────────────────┐
-                    │     Person 1     │
-                    │ Discovery/Scan   │
-                    └────────┬─────────┘
-                             │ Findings
-                             ▼
-                    ┌──────────────────┐
-                    │     Person 3     │
-                    │ Backend + CBOM   │
-                    └────────┬─────────┘
-                             │ Normalized data
-                             ▼
-                    ┌──────────────────┐
-                    │     Person 2     │
-                    │ Risk + Recommend │
-                    └────────┬─────────┘
-                             │ Enriched results
-                             ▼
-                    ┌──────────────────┐
-                    │     Person 3     │
-                    │ API / Persistence│
-                    └────────┬─────────┘
-                             │ JSON
-                             ▼
-                    ┌──────────────────┐
-                    │     Person 4     │
-                    │ Dashboard / UX   │
-                    └──────────────────┘
-```
-
-No person should build a private data format that the rest of the system has to reverse-engineer later.
+The goal is **not** to give one person the entire frontend or one person all integration work. Every member owns a meaningful core subsystem and a small portion of the visible product.
 
 ---
 
-# 2. Person 1 — Discovery & Cryptographic Detection
+# 2. Exact Ownership
 
-## Primary Ownership
+## Person 1 — Rishi
 
-**Own the entire asset discovery and cryptographic detection layer.**
+### Primary ownership: Orchestration, Normalization, CBOM and System Integration
 
-This person is responsible for answering:
+Rishi owns the central pipeline that turns independent scanner output into the final ECDAT result.
 
-> "What cryptographic artefacts exist in this asset, where are they, and what evidence caused us to detect them?"
+### Files / Modules
+
+```text
+backend/
+├── api/
+│   ├── scans.py
+│   ├── findings.py
+│   ├── cbom.py
+│   ├── risk.py
+│   └── recommendations.py
+├── orchestration/
+│   ├── scan_manager.py
+│   ├── dispatcher.py
+│   └── lifecycle.py
+├── normalization/
+│   ├── normalizer.py
+│   └── deduplication.py
+├── cbom/
+│   ├── generator.py
+│   └── serializer.py
+└── integration/
+    └── pipeline.py
+```
 
 ### Responsibilities
 
-- Repository/file enumeration
-- Source-code scanning
-- Regex/lexical detection
-- Cryptographic API/function signature detection
-- AST-based detection
-- Algorithm and variant identification
-- Key-size extraction where available
-- Detection evidence extraction
-- Confidence calculation
-- Dependency/library discovery
-- Certificate parsing
-- Binary scanning at prototype depth
-- Container/image scanning at prototype depth
-- Suspicious/custom-crypto heuristics
-- Conversion of raw detections into the shared `CryptoFinding` structure
+1. Scan lifecycle and orchestration.
+2. Route an input asset to the correct scanner(s).
+3. Define and enforce the canonical finding schema.
+4. Normalize outputs from all scanners.
+5. Deduplicate findings from multiple detection methods.
+6. Generate the internal CBOM representation.
+7. Connect the risk engine to the normalized findings.
+8. Connect recommendations to the final result.
+9. Expose the core FastAPI endpoints.
+10. Own end-to-end integration and final debugging.
+11. Ensure scan status transitions work correctly.
+12. Ensure all output is traceable back to evidence.
 
-### Ownership Boundary
+### Exact deliverable
 
-Person 1 **does not** own:
+Given any scanner output conforming to the shared finding contract:
 
-- Final risk score
-- Mosca-style assessment
-- Migration recommendations
-- Frontend
-- Database persistence implementation
-- Authentication
+```text
+scanner output
+      ↓
+normalized finding
+      ↓
+CBOM record
+      ↓
+risk analysis
+      ↓
+recommendation
+      ↓
+API response
+```
 
-Person 1 supplies the evidence needed by those components.
+Rishi does **not** implement the source detector, risk rules, or individual asset scanners. Those are owned by the other members.
+
+### Secondary visible-product ownership
+
+- Dashboard shell / overall result layout.
+- Overall scan result integration.
+- Final end-to-end UX consistency.
 
 ---
 
-## 2.1 Exact Scanner Responsibilities
+## Person 2 — Arnav
 
-### A. Source scanner
+### Primary ownership: Source-Code Cryptographic Detection Engine
 
-Support the languages prioritized by the SRS for the prototype:
+Arnav owns all source-code discovery logic.
 
-- Python
-- JavaScript / TypeScript
-- Java
-- C/C++ where practical
-
-Implement detection in this order:
+### Files / Modules
 
 ```text
-1. File enumeration
-2. Lexical/regex patterns
-3. Known crypto API signatures
-4. AST extraction
-5. Evidence/context extraction
-6. Normalize finding
+scanner/
+└── source/
+    ├── file_enumerator.py
+    ├── regex_detector.py
+    ├── api_detector.py
+    ├── ast_detector.py
+    ├── algorithm_rules.py
+    ├── key_size_extractor.py
+    ├── custom_crypto.py
+    └── source_scanner.py
 ```
 
-### B. Dependency scanner
+### Responsibilities
 
-Inspect common manifests and dependency declarations such as:
+1. Enumerate supported source files.
+2. Regex / lexical cryptographic detection.
+3. Cryptographic API/function signature detection.
+4. AST-based detection for supported languages.
+5. Identify algorithms and primitive types.
+6. Extract key sizes, modes and other parameters when available.
+7. Produce source evidence such as file, line and code context.
+8. Implement detection confidence.
+9. Implement suspicious/custom crypto heuristics.
+10. Support the prototype languages defined in the SRS.
+11. Emit findings using the canonical finding contract.
+
+### Detection layers
 
 ```text
-requirements.txt
-package.json
-pom.xml
-Dockerfile
+Source File
+    │
+    ├── Regex
+    ├── API Signature
+    ├── AST
+    └── Custom-Crypto Heuristics
+             ↓
+      Source Finding
+```
+
+### Exact deliverable
+
+Input:
+
+```text
+repository / source directory
 ```
 
 Output:
 
-- package/library name
-- version when available
-- source manifest
-- line/location when available
-- known cryptographic relevance
-- confidence
-
-### C. Certificate scanner
-
-Parse supported certificates/keys where provided as files and extract relevant metadata such as:
-
-- subject
-- issuer
-- validity dates
-- public-key algorithm
-- key size
-- signature algorithm
-
-### D. Binary scanner
-
-Prototype-level static indicators only:
-
-```text
-strings
-imports/symbols
-known crypto names/signatures/constants
+```json
+{
+  "artifact_type": "source",
+  "algorithm": "RSA",
+  "variant": "RSA-1024",
+  "file": "backend/auth.py",
+  "line": 48,
+  "detection_method": "AST",
+  "confidence": 0.97,
+  "evidence": "RSA.generate(1024)"
+}
 ```
 
-Do not implement full disassembly/reverse engineering.
+Arnav does **not** calculate business risk, CBOM structure, or migration recommendations.
 
-### E. Container scanner
+### Secondary visible-product ownership
 
-Prototype-level inspection of image metadata/layers/package contents to identify:
-
-- cryptographic libraries
-- relevant binaries/packages
-- configuration/certificate artefacts
-
-Do not attempt full cloud/Kubernetes infrastructure discovery.
-
-### F. Suspicious custom crypto
-
-Implement explainable heuristics for indicators such as:
-
-- repeated XOR transformations
-- bit rotations
-- byte substitutions
-- unusual modular arithmetic
-- lookup-table-heavy transformations
-- key-dependent iterative transformations
-
-The result must be labelled **potential/suspicious custom cryptography**, not guaranteed cryptographic classification.
+- Finding detail view.
+- Evidence/code-location display.
+- Detection-method and confidence presentation.
 
 ---
 
-## 2.2 Mandatory Output Contract
+## Person 3 — Shubh
 
-Person 1 must expose a stable normalized result object to Person 3.
+### Primary ownership: Cryptographic Intelligence, Risk and Migration Recommendation Engine
 
-Minimum conceptual fields:
+Shubh owns the interpretation of findings after discovery.
+
+### Files / Modules
+
+```text
+intelligence/
+├── crypto_kb.py
+├── algorithm_classification.py
+├── classical_risk.py
+├── quantum_risk.py
+├── mosca.py
+├── risk_score.py
+├── business_context.py
+├── migration.py
+└── recommendations.py
+```
+
+### Responsibilities
+
+1. Maintain the supported cryptographic algorithm knowledge base.
+2. Classify primitive type and security status.
+3. Assess classical weaknesses.
+4. Determine quantum-vulnerability status.
+5. Account for key size where applicable.
+6. Accept data lifetime as a contextual input.
+7. Accept business criticality as a contextual input.
+8. Compare protection lifetime and migration timeline using the defined Mosca-style approach.
+9. Produce a normalized risk score.
+10. Map risk score to severity.
+11. Produce an explainable reason for the risk.
+12. Generate migration recommendations.
+13. Distinguish KEM/key-establishment recommendations from signature recommendations.
+14. Assign migration priority.
+
+### Risk flow
+
+```text
+Normalized Finding
+        ↓
+Algorithm Classification
+        ↓
+Classical Security
+        ↓
+Quantum Vulnerability
+        ↓
+Data Lifetime + Business Criticality
+        ↓
+Mosca-style Assessment
+        ↓
+Risk Score / Severity
+        ↓
+Migration Recommendation
+```
+
+### Exact deliverable
+
+Input:
 
 ```json
 {
   "algorithm": "RSA",
-  "variant": "RSA-1024",
-  "category": "public-key",
-  "artifact_type": "source",
-  "file": "backend/auth.py",
-  "line": 48,
-  "evidence": "RSA.generate(1024)",
-  "detection_method": "AST",
-  "confidence": 0.98,
-  "library": null,
-  "library_version": null
+  "key_size": 1024,
+  "business_criticality": "HIGH",
+  "data_lifetime_years": 10,
+  "migration_time_years": 4
 }
 ```
 
-The exact shared schema is defined by the API/DB specification. Person 1 must implement against that contract rather than inventing another one.
-
----
-
-## 2.3 Person 1 — Day-by-Day Deliverables
-
-### Day 1
-
-- Define detection signatures
-- Define normalized finding interface with Person 3
-- Set up scanner module structure
-- Implement file enumeration
-- Implement first regex/API detectors
-
-### Day 2
-
-- Implement AST detection for Python
-- Implement AST detection for JS/TS
-- Extract line, context, algorithm, variant and key size
-
-### Day 3
-
-- Add Java/C/C++ coverage as practical
-- Implement dependency scanning
-- Implement certificate parsing
-
-### Day 4
-
-- Implement custom-crypto heuristics
-- Begin binary scanning
-- Begin container scanning
-
-### Day 5
-
-- Integrate every scanner through one common output format
-- Fix false positives
-- Test against curated dataset and at least one real open-source project/library
-
-### Day 6
-
-- Stabilize scanners
-- Prepare deterministic demo scan
-- Assist integration and bug fixing
-
----
-
-# 3. Person 2 — Risk, Quantum Analysis & Recommendations
-
-## Primary Ownership
-
-**Own the intelligence layer that converts a crypto finding into a security decision.**
-
-This person answers:
-
-> "How serious is this cryptographic artefact, why is it serious, and what should the organization do?"
-
-### Responsibilities
-
-- Cryptographic strength classification
-- Classical weakness classification
-- Quantum-vulnerability classification
-- Key-size assessment
-- Data-lifetime assessment
-- Business-criticality handling
-- Mosca-style risk assessment
-- Risk scoring
-- Severity classification
-- Migration priority calculation
-- PQC/hybrid recommendation logic
-- Explanation text for findings
-
-### Ownership Boundary
-
-Person 2 **does not** own:
-
-- Source parsing
-- Repository/file upload handling
-- API server implementation
-- Database persistence implementation
-- Frontend pages
-
-Person 2 receives normalized findings and returns enriched risk results.
-
----
-
-## 3.1 Risk Inputs
-
-The engine should consume at minimum:
-
-```text
-Algorithm
-Variant / key size
-Artefact category
-Detection confidence
-Classical security status
-Quantum vulnerability
-Data lifetime
-Business criticality
-Migration/transition considerations
-```
-
-The system should not reduce risk to a fixed mapping such as:
-
-```text
-RSA → Critical
-AES → Safe
-```
-
-The risk result must be contextual.
-
----
-
-## 3.2 Quantum Risk
-
-Maintain a compact knowledge base covering the algorithms used in the demo/test corpus.
-
-At minimum, support the major categories required by the SRS:
-
-- RSA
-- DH
-- ECDH
-- ECDSA
-- DSA
-- AES
-- 3DES/DES
-- MD5
-- SHA-1
-- SHA-2 family
-- ChaCha20
-- Ed25519/related modern signatures where detected
-- suspicious/custom cryptography
-
-Classify whether each artefact has meaningful post-quantum migration exposure.
-
----
-
-## 3.3 Mosca-Style Assessment
-
-Implement the comparison around:
-
-```text
-required protection lifetime
-vs.
-expected migration/protection transition window
-```
-
-Keep assumptions configurable and clearly label estimates as assumptions rather than guaranteed predictions.
-
-The UI/API should expose enough reasoning that a judge can understand **why** the risk is high.
-
----
-
-## 3.4 Recommendation Rules
-
-Recommendations must depend on the cryptographic use case.
-
-Examples:
-
-```text
-RSA key establishment / encryption
-    → ML-KEM or hybrid approach as appropriate
-
-ECDH / DH
-    → ML-KEM or hybrid approach as appropriate
-
-RSA / ECDSA signatures
-    → ML-DSA / SLH-DSA as appropriate
-
-MD5 / SHA-1
-    → stronger approved hash functions
-
-DES / 3DES
-    → modern symmetric encryption, typically AES-256 where appropriate
-
-Potential custom crypto
-    → manual review and replacement with vetted standard primitives
-```
-
-Do not make a blanket `RSA → ML-KEM` rule for every use case; signatures and key establishment require different migration targets.
-
----
-
-## 3.5 Mandatory Output Contract
-
-Minimum conceptual output:
+Output:
 
 ```json
 {
-  "risk_score": 94,
-  "severity": "CRITICAL",
   "quantum_vulnerable": true,
   "classical_risk": "HIGH",
-  "mosca_status": "HIGH",
-  "migration_priority": "IMMEDIATE",
-  "recommendation": "Transition to an appropriate PQC/hybrid mechanism",
-  "reason": "RSA-1024 is vulnerable to quantum factoring attacks and protects long-lived critical data."
+  "risk_score": 94,
+  "severity": "CRITICAL",
+  "mosca_status": "MIGRATION_WINDOW_AT_RISK",
+  "recommendation": "Evaluate a hybrid transition and an appropriate post-quantum replacement",
+  "migration_priority": "IMMEDIATE"
 }
 ```
 
-Person 2 must keep the output deterministic and testable.
+### Secondary visible-product ownership
+
+- Risk-detail visualization.
+- Risk explanation section.
+- Migration recommendation screen.
+- Mosca-style timeline visualization.
 
 ---
 
-## 3.6 Person 2 — Day-by-Day Deliverables
+## Person 4 — Rachit
 
-### Day 1
+### Primary ownership: Non-Source Asset Discovery
 
-- Define risk inputs with Person 1/3
-- Define algorithm knowledge base structure
-- Define severity levels
-- Define scoring dimensions
+Rachit owns all discovery paths that are outside the main source-code detector.
 
-### Day 2
+### Files / Modules
 
-- Implement algorithm/security classification
-- Implement key-size rules
-- Implement quantum-vulnerability rules
-
-### Day 3
-
-- Implement Mosca-style assessment
-- Implement data-lifetime/business-criticality handling
-- Implement risk scoring
-
-### Day 4
-
-- Implement recommendation matrix
-- Implement migration priority
-- Implement explanation generation
-
-### Day 5
-
-- Integrate risk engine with normalized scanner findings
-- Create deterministic test cases
-- Validate scores against expected outputs
-
-### Day 6
-
-- Tune scoring/recommendations
-- Support frontend integration
-- Prepare demo explanations and fix inconsistencies
-
----
-
-# 4. Person 3 — Backend, Database, CBOM & Integration
-
-## Primary Ownership
-
-**Own the application's central integration layer.**
-
-This person answers:
-
-> "How does a scan move through the system, get stored, enriched, exposed through APIs, and turned into a CBOM/report?"
+```text
+scanner/
+├── dependency/
+│   ├── manifest_parser.py
+│   ├── library_detector.py
+│   └── dependency_scanner.py
+├── certificate/
+│   ├── certificate_parser.py
+│   └── certificate_scanner.py
+├── binary/
+│   ├── strings.py
+│   ├── symbols.py
+│   ├── signatures.py
+│   └── binary_scanner.py
+└── container/
+    ├── image_inspector.py
+    ├── package_detector.py
+    └── container_scanner.py
+```
 
 ### Responsibilities
 
-- FastAPI application
-- API routing
-- Scan orchestration
-- Asset intake
-- Job/scan state handling
-- Temporary file handling
-- Database schema implementation
-- Persistence
-- CBOM generation/normalization
-- Integration of Person 1's scanner output
-- Integration of Person 2's risk output
-- Result retrieval APIs
-- Report/export plumbing if time permits
-- Container scan orchestration
-- Shared validation/error handling
+#### Dependency / Library scanning
 
-### Ownership Boundary
+1. Parse supported dependency manifests.
+2. Identify cryptographic libraries.
+3. Extract library names and versions.
+4. Map libraries to known crypto capabilities where supported.
 
-Person 3 **does not** implement the detection algorithms or the risk model itself. Those come from Persons 1 and 2.
+#### Certificate scanning
 
-Person 3 integrates them.
+5. Parse PEM/DER certificates.
+6. Extract issuer, subject and validity.
+7. Extract public-key algorithm and key size.
+8. Extract signature algorithm.
+9. Produce certificate findings.
+
+#### Binary scanning
+
+10. Inspect strings.
+11. Inspect symbols/imports where available.
+12. Match known crypto library indicators and signatures.
+13. Produce confidence-rated binary findings.
+14. Avoid executing untrusted uploaded binaries.
+
+#### Container scanning
+
+15. Inspect Dockerfile/image metadata.
+16. Identify installed crypto-related packages/libraries.
+17. Reuse binary/dependency detection logic where possible.
+18. Produce container findings.
+
+### Exact deliverable
+
+Each module emits the **same normalized pre-CBOM finding contract** as Arnav's source scanner.
+
+```text
+Dependency ───┐
+Certificate ──┤
+Binary ───────┼──→ Finding Contract
+Container ────┘
+```
+
+### Secondary visible-product ownership
+
+- New Scan asset-type selection.
+- Scan progress stages for dependency/certificate/binary/container analysis.
+- CBOM table filters for source/dependency/binary/container/certificate artefacts.
 
 ---
 
-## 4.1 Core Backend Flow
+# 3. Shared Finding Contract
 
-```text
-POST /scan
-    ↓
-Create scan record
-    ↓
-Store/prepare asset
-    ↓
-Select scanner(s)
-    ↓
-Run detection
-    ↓
-Normalize findings
-    ↓
-Send findings to risk engine
-    ↓
-Create enriched CBOM entries
-    ↓
-Persist results
-    ↓
-Expose results through API
+This is the single most important interface between members.
+
+No scanner should invent its own output format.
+
+Every scanner must be able to produce at least:
+
+```json
+{
+  "artifact_type": "source | dependency | certificate | binary | container",
+  "algorithm": "string | null",
+  "primitive_type": "symmetric | asymmetric | hash | signature | key_exchange | protocol | custom | unknown",
+  "variant": "string | null",
+  "key_size": "integer | null",
+  "library": "string | null",
+  "library_version": "string | null",
+  "asset_path": "string",
+  "line_start": "integer | null",
+  "line_end": "integer | null",
+  "detection_method": "string",
+  "confidence": "float",
+  "evidence": "string | null"
+}
 ```
+
+Rishi owns normalization, but **all four members must code to this contract**.
 
 ---
 
-## 4.2 Required API Surface
+# 4. Secondary Shared Work — Frontend
 
-At minimum:
+Frontend is **not assigned to one person**.
 
-```text
-POST /scans
-GET  /scans/{scan_id}
-GET  /scans/{scan_id}/findings
-GET  /scans/{scan_id}/cbom
-GET  /scans/{scan_id}/risks
-GET  /scans/{scan_id}/recommendations
-```
+Each member owns the UI that corresponds to their core subsystem:
 
-The exact request/response contract must match `API_DB_SPEC.md`.
+| Person | UI responsibility |
+|---|---|
+| Rishi | Dashboard shell + overall scan/result integration |
+| Arnav | Finding detail + source evidence |
+| Shubh | Risk detail + recommendations + Mosca visualization |
+| Rachit | Scan input/progress + CBOM filters/table |
 
----
-
-## 4.3 Database Responsibilities
-
-Persist at minimum:
-
-```text
-Scan
-Asset
-CryptoFinding / Artifact
-RiskAssessment
-Recommendation
-```
-
-The database must support:
-
-- scan history
-- finding retrieval
-- filtering by severity/algorithm/type
-- CBOM reconstruction
-- dashboard aggregates
-
-Do not over-engineer the DB.
+The frontend uses the same backend APIs and data models. No member should create a separate data model purely for their UI.
 
 ---
 
-## 4.4 CBOM Responsibilities
+# 5. Workload Balance
 
-Person 3 owns the final conversion from normalized findings + risk data into the project's CBOM representation.
+The work is intentionally divided into approximately four comparable work packages:
 
-Each CBOM entry should retain:
+| Person | Core engineering scope | Integration load | UI scope |
+|---|---|---|---|
+| Rishi | Orchestration + normalization + CBOM + API integration | High | Moderate |
+| Arnav | Source detection engine | Low | Moderate |
+| Shubh | Risk + quantum + recommendations | Medium | Moderate |
+| Rachit | Dependency + certificate + binary + container scanning | Medium | Moderate |
 
-- artefact identity
-- algorithm
-- variant/key size when available
-- category
-- asset/file/location
-- detection method
-- confidence
-- library/dependency information when available
-- quantum status
-- risk
-- business/data-lifetime context where supplied
-- recommendation
-- evidence/reference
+### Important balancing rule
 
-The implementation should follow the CBOM representation selected in `API_DB_SPEC.md`.
+Rishi owns **system integration**, but that does **not** mean Rishi writes everyone else's code or finishes unfinished modules for them.
+
+Each owner must deliver a functioning module against the shared interfaces.
+
+Similarly, Rachit's four scanner categories are intentionally lighter-weight static inspection modules and reuse common parser/signature utilities where possible; they are not four separate full-scale analysis systems.
 
 ---
 
-## 4.5 Person 3 — Day-by-Day Deliverables
+# 6. Day-by-Day Assignment
 
-### Day 1
+## Day 1 — Contracts and Skeletons
 
-- Scaffold FastAPI project
-- Define shared schemas
-- Set up database
-- Implement health/status endpoint
-- Agree scanner/risk interfaces with Persons 1 and 2
+### Rishi
+- Freeze finding schema.
+- Freeze scan lifecycle.
+- Create API skeleton.
+- Create orchestration skeleton.
+- Create CBOM skeleton.
 
-### Day 2
+### Arnav
+- Create source scanner structure.
+- Implement file enumeration.
+- Implement initial regex/API signatures.
 
-- Implement scan creation/intake
-- Implement file/repository handling
-- Implement scan state model
-- Persist findings
+### Shubh
+- Create crypto knowledge base structure.
+- Define algorithm classification.
+- Define risk inputs/outputs.
+- Define first risk rules.
 
-### Day 3
+### Rachit
+- Create dependency/certificate/binary/container scanner structures.
+- Implement manifest parsing skeleton.
+- Implement certificate parsing skeleton.
 
-- Integrate Person 1 scanner
-- Implement CBOM construction
-- Implement findings/results APIs
+### End-of-day requirement
 
-### Day 4
-
-- Integrate Person 2 risk engine
-- Persist risk/recommendation results
-- Implement CBOM/risk/recommendation endpoints
-
-### Day 5
-
-- End-to-end pipeline working:
-
-```text
-upload → scan → detect → CBOM → risk → API
-```
-
-- Add aggregation endpoints for dashboard
-- Add robust errors/validation
-
-### Day 6
-
-- Stabilize backend
-- Demo dataset handling
-- Performance cleanup
-- Support frontend debugging
-- Report/export only if core system is already stable
+All four members commit code that can be imported by the rest of the system.
 
 ---
 
-# 5. Person 4 — Frontend, Dashboard & Demo UX
+## Day 2 — First Working Modules
 
-## Primary Ownership
+### Rishi
+- Finish orchestration and normalization contracts.
+- Implement scan status lifecycle.
+- Implement storage models needed for findings/scans.
 
-**Own the complete user-facing experience.**
+### Arnav
+- Implement AST detection.
+- Implement algorithm/key-size extraction.
+- Implement confidence calculation.
 
-This person answers:
+### Shubh
+- Implement classical + quantum classification.
+- Implement first risk score.
+- Implement explainable risk output.
 
-> "Can a security analyst understand the organization's cryptographic posture and act on it?"
+### Rachit
+- Finish dependency detection.
+- Finish certificate parser.
+- Start binary signatures/import detection.
 
-### Responsibilities
+### End-of-day requirement
 
-- Next.js/TypeScript application
-- Dashboard
-- Scan creation interface
-- Scan progress/status UI
-- Findings table
-- Filtering/sorting/search
-- CBOM explorer
-- Risk detail page
-- Recommendation display
-- Repository/evidence viewer
-- Charts/visualizations
-- Error/loading states
-- Final demo UX
-
-### Ownership Boundary
-
-Person 4 should not implement scanner or risk logic in the frontend. The UI consumes backend results through the API.
+A real source repository should produce normalized findings and a risk result through code, even if the frontend is incomplete.
 
 ---
 
-## 5.1 Required Pages
+## Day 3 — End-to-End Vertical Slice
 
-### A. Dashboard
+### Rishi
+- Connect source scanner → normalizer → CBOM → risk engine → API.
+- Persist scan/finding data.
 
-Show:
+### Arnav
+- Improve detector coverage.
+- Add custom crypto heuristics.
+- Add evidence extraction.
 
-```text
-Total artefacts
-Critical/high/medium/low findings
-Quantum-vulnerable count
-Algorithm distribution
-Risk distribution
-Recent scans
-```
+### Shubh
+- Implement Mosca-style calculation.
+- Add business criticality/data lifetime inputs.
+- Implement migration recommendations.
 
-### B. New Scan
+### Rachit
+- Finish binary scanner.
+- Implement container/package inspection.
+- Normalize all non-source scanner outputs.
 
-Support the prototype input options defined in the SRS:
-
-```text
-Git repository / repository URL
-ZIP/source bundle
-Binary
-Container/image reference
-Certificate
-```
-
-Only expose options that are genuinely implemented in the backend.
-
-### C. Scan Progress
-
-Show meaningful pipeline stages such as:
-
-```text
-Enumerating files
-Parsing source
-Scanning dependencies
-Inspecting certificates
-Building CBOM
-Assessing risk
-Generating recommendations
-```
-
-### D. Findings / CBOM Explorer
-
-Table with at least:
-
-```text
-Algorithm
-Variant/key size
-Location
-Artifact type
-Severity
-Quantum status
-Confidence
-Detection method
-```
-
-### E. Risk Detail
-
-Show:
-
-```text
-Finding
-Evidence
-Why detected
-Classical risk
-Quantum risk
-Data lifetime
-Business criticality
-Mosca-style result
-Risk score
-Migration priority
-Recommendation
-```
-
-### F. Recommendations
-
-Display:
-
-```text
-Current mechanism
-Problem
-Recommended transition
-Priority
-Reason
-```
-
----
-
-## 5.2 Person 4 — Day-by-Day Deliverables
-
-### Day 1
-
-- Scaffold frontend
-- Define app routes
-- Define reusable data types from API contract
-- Build dashboard shell
-
-### Day 2
-
-- Build scan creation screen
-- Build scan progress screen
-- Add API integration skeleton
-
-### Day 3
-
-- Build findings table
-- Build CBOM explorer
-- Add filtering/search/sorting
-
-### Day 4
-
-- Build risk detail page
-- Build recommendation view
-- Add charts/summary cards
-
-### Day 5
-
-- Connect all backend endpoints
-- Implement loading/error/empty states
-- Verify complete end-to-end user flow
-
-### Day 6
-
-- Polish UI
-- Fix presentation issues
-- Make demo flow deterministic
-- Add final charts/animations only after functionality works
-
----
-
-# 6. Shared Work — ALL 4 PEOPLE
-
-These activities are **not assigned to one person** because they require the complete system.
-
-## A. Shared Data Contract
-
-By the end of Day 1, all four must agree on:
-
-```text
-CryptoFinding
-RiskAssessment
-Recommendation
-Scan
-CBOM
-```
-
-No breaking schema changes after integration begins unless all four agree.
-
-## B. Integration Testing
-
-All four participate in testing:
+### End-of-day hard milestone
 
 ```text
 Repository
    ↓
-Person 1 scanner
+Source detection
    ↓
-Person 3 backend/CBOM
+Normalized findings
    ↓
-Person 2 risk
+CBOM
    ↓
-Person 3 API
+Risk
    ↓
-Person 4 frontend
+Recommendation
+   ↓
+API response
 ```
 
-## C. Demo Dataset
-
-Everyone contributes to a single deterministic test repository containing deliberately known examples.
-
-Minimum examples:
-
-```text
-RSA weak key
-RSA modern key
-AES
-MD5
-SHA-1
-SHA-256
-ECDSA/ECDH
-crypto dependency
-certificate
-potential custom crypto
-Dockerfile/container dependency
-binary indicator
-```
-
-The team should also test against at least one suitable real open-source repository/library from the SIH-supported dataset strategy where feasible.
-
-## D. Final Demo
-
-All four should know the complete product flow. No single person should be the only person capable of running the demo.
+must work for at least one complete test repository.
 
 ---
 
-# 7. Exact Feature Ownership Matrix
+## Day 4 — Product Completion
 
-| Feature | P1 | P2 | P3 | P4 |
-|---|---:|---:|---:|---:|
-| File/repository discovery | **Owner** |  | Support |  |
-| Regex detection | **Owner** |  |  |  |
-| API detection | **Owner** |  |  |  |
-| AST detection | **Owner** |  |  |  |
-| Dependency detection | **Owner** |  | Integration |  |
-| Certificate parsing | **Owner** |  | Integration | Display |
-| Binary scanning | **Owner** |  | Integration | Display |
-| Container scanning | **Owner** |  | **Integration owner** | Display |
-| Custom crypto heuristics | **Owner** |  |  | Display |
-| Finding normalization | **Owner** |  | **Integration owner** |  |
-| Algorithm security classification |  | **Owner** |  |  |
-| Quantum vulnerability |  | **Owner** |  | Display |
-| Mosca-style assessment |  | **Owner** |  | Display |
-| Risk scoring |  | **Owner** | Integration | Display |
-| Recommendations |  | **Owner** | Integration | Display |
-| Scan orchestration |  |  | **Owner** |  |
-| Database |  |  | **Owner** |  |
-| CBOM generation/storage | Support |  | **Owner** | Display |
-| API |  |  | **Owner** | Consumer |
-| Dashboard |  |  |  | **Owner** |
-| Scan UI |  |  |  | **Owner** |
-| Findings UI |  |  |  | **Owner** |
-| Risk UI |  |  |  | **Owner** |
-| Recommendations UI |  |  |  | **Owner** |
-| Demo presentation | Support | Support | Support | **Owner** |
-| Integration testing | **Shared** | **Shared** | **Shared** | **Shared** |
+### Rishi
+- Finish API coverage.
+- Connect frontend data flow.
+- Fix pipeline/integration defects.
+
+### Arnav
+- Increase source detection coverage.
+- Reduce false positives.
+- Finalize source evidence output.
+
+### Shubh
+- Finalize risk scoring.
+- Finalize recommendation mappings.
+- Finalize explanations and migration priority.
+
+### Rachit
+- Stabilize dependency/certificate/binary/container scanners.
+- Improve error handling for unsupported inputs.
+- Finalize non-source evidence output.
+
+### Shared frontend work
+
+Each member builds their assigned screens/components.
 
 ---
 
-# 8. What Each Person Must Have Working Before Integration
+## Day 5 — Integration and Demo Dataset
 
-## Person 1
+### Rishi
+- Full integration testing.
+- Scan history/report integration.
+- Performance and failure-path cleanup.
 
-```text
-sample repository
-    ↓
-scanner
-    ↓
-normalized findings JSON
-```
+### Arnav
+- Prepare curated source-code test cases.
+- Validate expected detections.
+- Fix source scanner regressions.
 
-At least these must be reliably detected:
+### Shubh
+- Validate risk outputs against curated findings.
+- Prepare example risk scenarios.
+- Ensure recommendation explanations are consistent.
+
+### Rachit
+- Prepare dependency, certificate, binary and container test inputs.
+- Validate expected outputs.
+- Fix scanner regressions.
+
+### Shared goal
+
+Create one deterministic demonstration dataset containing:
 
 ```text
 RSA
 AES
-MD5
-SHA-1/SHA-256
-ECDSA/ECDH
-known crypto dependency
+SHA-1 / MD5
+ECDSA / ECDH
+legacy dependency
+certificate
+binary indicator
+container dependency
+suspicious custom crypto
 ```
 
-Plus prototype support for certificate/custom/binary/container where time permits.
+---
 
-## Person 2
+## Day 6 — Hardening / Buffer
+
+### Everyone
+
+- Fix crashes.
+- Fix integration issues.
+- Validate complete scan pipeline.
+- Run the final demo dataset.
+- Improve loading/error states.
+- Verify CBOM output.
+- Verify risk and recommendation consistency.
+- Remove unfinished features from the demo.
+
+### Rishi
+Final system integration owner.
+
+### Arnav
+Final source-detection owner.
+
+### Shubh
+Final risk/intelligence owner.
+
+### Rachit
+Final non-source-scanning owner.
+
+---
+
+# 7. Integration Rules
+
+## Rule 1 — Shared contracts first
+
+No member changes the canonical finding structure casually.
+
+If a field must change, all affected modules are updated together.
+
+## Rule 2 — Modules must work independently
+
+Every core subsystem should have a simple direct test.
+
+Examples:
 
 ```text
-normalized finding
-    ↓
-risk engine
-    ↓
-enriched risk + recommendation JSON
+source_scanner(repo) → findings
+risk_engine(finding) → risk
+cbom_generator(findings) → cbom
+binary_scanner(file) → findings
 ```
 
-At least:
+## Rule 3 — No hidden logic in the frontend
+
+The frontend only displays backend results.
+
+It must not independently calculate:
+
+- risk scores;
+- quantum vulnerability;
+- recommendations;
+- CBOM semantics.
+
+## Rule 4 — No arbitrary scope expansion
+
+Nobody adds major features during the last two days unless the core end-to-end path already works.
+
+---
+
+# 8. Definition of Done for Each Person
+
+## Rishi
 
 ```text
-quantum status
-risk score
-severity
-Mosca-style result
-migration priority
-recommendation
-reason
+[ ] scan can be created
+[ ] scanners can be dispatched
+[ ] findings are normalized
+[ ] duplicates are handled
+[ ] CBOM is generated
+[ ] API exposes final results
+[ ] end-to-end pipeline works
 ```
 
-## Person 3
+## Arnav
 
 ```text
-asset
- ↓
-scan job
- ↓
-P1 findings
- ↓
-P2 risk
- ↓
+[ ] source files are enumerated
+[ ] regex detection works
+[ ] API detection works
+[ ] AST detection works
+[ ] algorithm/key size extraction works
+[ ] evidence is captured
+[ ] confidence is assigned
+[ ] custom crypto heuristic works
+```
+
+## Shubh
+
+```text
+[ ] algorithm knowledge base exists
+[ ] classical risk works
+[ ] quantum classification works
+[ ] data lifetime is supported
+[ ] business criticality is supported
+[ ] Mosca-style assessment works
+[ ] risk score works
+[ ] recommendations work
+```
+
+## Rachit
+
+```text
+[ ] dependency scanning works
+[ ] certificate scanning works
+[ ] binary scanning works
+[ ] container scanning works
+[ ] all outputs follow finding contract
+[ ] unsupported input handling works
+```
+
+---
+
+# 9. Final Ownership Map
+
+```text
+RISHI
+─────
+Scan orchestration
+Normalization
+Deduplication
 CBOM
- ↓
-REST API
-```
+FastAPI integration
+End-to-end integration
+Dashboard shell
 
-## Person 4
+ARNAV
+─────
+Source scanning
+Regex detection
+API signatures
+AST detection
+Key-size extraction
+Custom crypto heuristics
+Source evidence
+Finding detail UI
 
-```text
-API
- ↓
-Dashboard
- ↓
-Scan
- ↓
-Results
- ↓
-Finding detail
- ↓
-Recommendation
+SHUBH
+──────
+Crypto knowledge base
+Classical risk
+Quantum risk
+Mosca-style analysis
+Business context
+Risk scoring
+PQC / hybrid recommendations
+Risk + recommendation UI
+
+RACHIT
+──────
+Dependency scanning
+Library detection
+Certificate scanning
+Binary scanning
+Container scanning
+Non-source evidence
+Scan input/progress UI
+CBOM table UI
 ```
 
 ---
 
-# 9. Integration Milestones
+# 10. The One Rule That Matters Most
 
-## Milestone 1 — End of Day 1
+The team should not aim for:
 
-All four agree on:
+> **“Everyone finishes their entire module separately.”**
 
-- architecture
-- schemas
-- endpoint contracts
-- repository structure
-- ownership boundaries
+The real milestone is:
 
-## Milestone 2 — End of Day 2
+> **“A real repository can be scanned, cryptographic artefacts can be detected, normalized into a CBOM, assigned a quantum/classical risk, given a migration recommendation, and displayed in the product.”**
 
-Person 1 can detect basic crypto.  
-Person 2 can score hard-coded/sample findings.  
-Person 3 can create a scan and persist data.  
-Person 4 has the frontend shell and scan/results skeleton.
-
-## Milestone 3 — End of Day 3
-
-First real vertical slice:
-
-```text
-Upload repository
-    ↓
-Detect RSA/MD5/AES
-    ↓
-Store findings
-    ↓
-Calculate risk
-    ↓
-View results in UI
-```
-
-**This is the most important milestone.**
-
-## Milestone 4 — End of Day 4
-
-Add:
-
-- dependency detection
-- better AST detection
-- risk detail
-- recommendations
-- CBOM explorer
-
-## Milestone 5 — End of Day 5
-
-Add and stabilize prototype-level:
-
-- certificates
-- binary indicators
-- containers
-- custom-crypto heuristics
-
-Only if the core path is already stable.
-
-## Milestone 6 — Day 6
-
-Full integration, bug fixing, demo hardening and presentation polish.
-
----
-
-# 10. Priority Rule When Time Runs Out
-
-The team must **not** sacrifice the core end-to-end pipeline to add more scanner types.
-
-Priority order:
-
-```text
-P0 — MUST WORK
-
-1. Source repository scanning
-2. Crypto API/AST detection
-3. Dependency detection
-4. Normalized findings
-5. CBOM
-6. Quantum-risk classification
-7. Risk scoring
-8. Mosca-style assessment
-9. Recommendations
-10. Dashboard + finding detail
-
-P1 — SHOULD WORK
-
-11. Certificate scanning
-12. Binary scanning
-13. Container scanning
-14. Custom-crypto heuristics
-15. Export/report
-
-P2 — NICE TO HAVE
-
-16. More languages
-17. Advanced binary analysis
-18. Cloud/infrastructure connectors
-19. Enterprise authentication
-20. Advanced deployment/distributed scanning
-```
-
-**Rule:** Never delay P0 functionality because a P1 scanner is unfinished.
-
----
-
-# 11. Definition of Done
-
-The project is considered demo-ready when a fresh run can reliably perform:
-
-```text
-1. User selects a repository.
-2. System starts a scan.
-3. Crypto artefacts are discovered.
-4. Findings include evidence and confidence.
-5. Dependencies are identified.
-6. Findings are normalized into a CBOM.
-7. Quantum/classical risk is assessed.
-8. Mosca-style context is shown.
-9. Migration recommendations are generated.
-10. Results are visible in the dashboard.
-11. A user can open a finding and understand why it was flagged.
-12. The complete flow works without manual database edits or hard-coded UI results.
-```
-
-Hard-coded **demo data may be included as a fallback dataset**, but the primary demonstration must show the actual scan pipeline producing the displayed findings.
-
----
-
-# 12. Collaboration Rules
-
-## Rule 1 — Shared schemas first
-
-No coding around incompatible data structures.
-
-## Rule 2 — Small, frequent integration
-
-Do not wait until the final day to merge all components.
-
-## Rule 3 — Every owner must expose usable interfaces
-
-A module is not complete merely because its internal code works. It must be callable by the rest of the system.
-
-## Rule 4 — Deterministic demo
-
-The demo repository and expected findings must be known in advance.
-
-## Rule 5 — No scope creep
-
-Do not add AI, cloud scanning, Kubernetes, full reverse engineering, or additional languages until the P0 flow is stable.
-
----
-
-# 13. Final Ownership Summary
-
-```text
-PERSON 1
-Discovery + Detection
-"What crypto is here?"
-
-PERSON 2
-Risk + Quantum + Recommendations
-"How dangerous is it and what should we do?"
-
-PERSON 3
-Backend + DB + CBOM + Integration
-"How does everything connect and persist?"
-
-PERSON 4
-Frontend + Dashboard + Demo UX
-"How does the analyst understand and use it?"
-```
-
-The four people together own the final integration. **No module is considered complete until it works through the shared interfaces and contributes to the end-to-end scan flow.**
+Everything else is expansion, coverage and polish.
