@@ -1,7 +1,7 @@
 from pathlib import Path
 
 from ..base import BaseScanner
-from ...schemas.finding import Finding
+from schemas.finding import Finding
 from .image_inspector import ContainerImageInspector
 from .package_detector import ContainerPackageDetector
 

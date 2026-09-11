@@ -1,10 +1,10 @@
 from pathlib import Path
 
-from backend.scanners.binary.format_detector import BinaryFormatDetector
-from backend.scanners.binary.strings import BinaryStringExtractor
-from backend.scanners.binary.symbols import BinarySymbolExtractor
-from backend.scanners.binary.signatures import CryptoSignatureDetector
-from backend.scanners.binary.binary_scanner import BinaryScanner
+from scanners.binary.format_detector import BinaryFormatDetector
+from scanners.binary.strings import BinaryStringExtractor
+from scanners.binary.symbols import BinarySymbolExtractor
+from scanners.binary.signatures import CryptoSignatureDetector
+from scanners.binary.binary_scanner import BinaryScanner
 
 def test_unknown_file(tmp_path):
     file_path = tmp_path / "hello.txt"

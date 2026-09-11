@@ -1,7 +1,7 @@
 from pathlib import Path
 
 from ..base import BaseScanner
-from ...schemas.finding import Finding
+from schemas.finding import Finding
 from .format_detector import BinaryFormatDetector
 from .signatures import CryptoSignatureDetector
 from .strings import BinaryStringExtractor

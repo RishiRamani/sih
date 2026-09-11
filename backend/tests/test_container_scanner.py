@@ -1,8 +1,8 @@
 import tarfile
 
-from backend.scanners.container.image_inspector import ContainerImageInspector
-from backend.scanners.container.package_detector import ContainerPackageDetector
-from backend.scanners.container.container_scanner import ContainerScanner
+from scanners.container.image_inspector import ContainerImageInspector
+from scanners.container.package_detector import ContainerPackageDetector
+from scanners.container.container_scanner import ContainerScanner
 
 def create_test_archive(path):
     with tarfile.open(path, "w") as archive:

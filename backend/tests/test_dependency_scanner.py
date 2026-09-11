@@ -1,6 +1,6 @@
 import json
 
-from backend.scanners.dependency.dependency_scanner import DependencyScanner
+from scanners.dependency.dependency_scanner import DependencyScanner
 
 
 def get_libraries(findings):

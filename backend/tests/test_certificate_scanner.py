@@ -5,8 +5,8 @@ from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import ec, rsa
 from cryptography.x509.oid import NameOID
 
-from backend.scanners.certificate.certificate_parser import CertificateParser
-from backend.scanners.certificate.certificate_scanner import CertificateScanner
+from scanners.certificate.certificate_parser import CertificateParser
+from scanners.certificate.certificate_scanner import CertificateScanner
 
 
 def create_rsa_certificate():

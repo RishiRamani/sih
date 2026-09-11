@@ -2,7 +2,7 @@ from pathlib import Path
 from typing import Any
 
 from ..base import BaseScanner
-from ...schemas.finding import Finding
+from schemas.finding import Finding
 
 from .manifest_parser import ManifestParser
 from .library_detector import LibraryDetector

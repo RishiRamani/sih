@@ -1,7 +1,7 @@
 from pathlib import Path
 
 from ..base import BaseScanner
-from ...schemas.finding import Finding
+from scanners.source.finding import Finding
 from .certificate_parser import CertificateParser
 
 

@@ -1,8 +1,8 @@
 from pathlib import Path
 from typing import Any
 
-from ..schemas.finding import Finding
-from ..scanners.base import BaseScanner
+from schemas.finding import Finding
+from scanners.base import BaseScanner
 
 
 class ScanPipeline:

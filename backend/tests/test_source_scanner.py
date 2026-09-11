@@ -8,7 +8,7 @@ import unittest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from scanner.source.source_scanner import scan_source
+from scanners.source.source_scanner import scan_source
 
 SAMPLE_REPO = os.path.join(os.path.dirname(__file__), "sample_repo")
 
