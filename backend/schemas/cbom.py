@@ -43,6 +43,35 @@ class AlgorithmProperties(BaseModel):
         alias="nistQuantumSecurityLevel",
     )
 
+class CertificateProperties(BaseModel):
+    """CycloneDX 1.7 certificateProperties."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    serial_number: str | None = Field(
+        default=None,
+        alias="serialNumber",
+    )
+
+    subject_name: str | None = Field(
+        default=None,
+        alias="subjectName",
+    )
+
+    issuer_name: str | None = Field(
+        default=None,
+        alias="issuerName",
+    )
+
+    not_valid_before: str | None = Field(
+        default=None,
+        alias="notValidBefore",
+    )
+
+    not_valid_after: str | None = Field(
+        default=None,
+        alias="notValidAfter",
+    )
 
 class CryptoProperties(BaseModel):
     """CycloneDX 1.7 cryptoProperties."""
@@ -56,8 +85,12 @@ class CryptoProperties(BaseModel):
         alias="algorithmProperties",
     )
 
-    oid: str | None = None
+    certificate_properties: CertificateProperties | None = Field(
+        default=None,
+        alias="certificateProperties",
+    )
 
+    oid: str | None = None
 
 class CBOMProperty(BaseModel):
     """CycloneDX property."""

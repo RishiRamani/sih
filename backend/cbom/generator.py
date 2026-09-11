@@ -8,6 +8,7 @@ from ..schemas.cbom import (
     CBOMDependency,
     CBOMProperty,
     CryptoProperties,
+    CertificateProperties,
 )
 from ..schemas.finding import Finding
 from .identifiers import (
@@ -16,6 +17,26 @@ from .identifiers import (
     crypto_asset_type,
     library_fingerprint,
 )
+
+def _certificate_properties(
+    finding: Finding,
+) -> CertificateProperties:
+    """
+    Map an ECDAT certificate finding into CycloneDX
+    certificate properties.
+    """
+
+    return CertificateProperties(
+        serial_number=finding.metadata.get("serial_number"),
+        subject_name=finding.metadata.get("subject"),
+        issuer_name=finding.metadata.get("issuer"),
+        not_valid_before=finding.metadata.get(
+            "not_valid_before"
+        ),
+        not_valid_after=finding.metadata.get(
+            "not_valid_after"
+        ),
+    )
 
 def build_dependencies(
     findings: list[Finding],
@@ -150,6 +171,11 @@ def generate_cbom(findings: list[Finding]) -> CBOM:
                             if asset_type == "algorithm"
                             else None
                         ),
+                        certificate_properties=(
+                            _certificate_properties(finding)
+                            if asset_type == "certificate"
+                            else None
+                        ),
                     ),
                     "properties": [
                         CBOMProperty(
@@ -167,6 +193,26 @@ def generate_cbom(findings: list[Finding]) -> CBOM:
                         CBOMProperty(
                             name="ecdat:sourceFinding",
                             value=finding_id,
+                        ),
+                        *(
+                            [
+                                CBOMProperty(
+                                    name="ecdat:signatureAlgorithm",
+                                    value=str(
+                                        finding.metadata["signature_algorithm"]
+                                    ),
+                                ),
+                                CBOMProperty(
+                                    name="ecdat:signatureOid",
+                                    value=str(
+                                        finding.metadata["signature_oid"]
+                                    ),
+                                ),
+                            ]
+                            if asset_type == "certificate"
+                            and finding.metadata.get("signature_algorithm")
+                            and finding.metadata.get("signature_oid")
+                            else []
                         ),
                     ],
                 }
