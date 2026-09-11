@@ -121,18 +121,29 @@ def test_application_depends_on_library() -> None:
             artifact_type="dependency",
             library="OpenSSL",
             library_version="3.2",
-            algorithm="RSASSA-PKCS1",
             asset_path="payment-service/requirements.txt",
             detection_method="dependency",
             confidence=0.95,
-        )
+        ),
+        Finding(
+            artifact_type="crypto_algorithm",
+            algorithm="RSASSA-PKCS1",
+            key_size=2048,
+            library="OpenSSL",
+            library_version="3.2",
+            asset_path="payment-service/src/auth.py",
+            line_start=42,
+            detection_method="ast",
+            confidence=0.95,
+            evidence="RSA_sign(...)",
+        ),
     ]
 
     cbom = generate_cbom(findings)
 
     application_ref = "application|payment-service"
     library_ref = "library|OpenSSL|3.2"
-    crypto_ref = component_fingerprint(findings[0])
+    crypto_ref = component_fingerprint(findings[1])
 
     application_dependency = next(
         dependency
@@ -155,11 +166,22 @@ def test_serialized_cbom_contains_dependency_graph() -> None:
             artifact_type="dependency",
             library="OpenSSL",
             library_version="3.2",
-            algorithm="RSASSA-PKCS1",
             asset_path="payment-service/requirements.txt",
             detection_method="dependency",
             confidence=0.95,
-        )
+        ),
+        Finding(
+            artifact_type="crypto_algorithm",
+            algorithm="RSASSA-PKCS1",
+            key_size=2048,
+            library="OpenSSL",
+            library_version="3.2",
+            asset_path="payment-service/src/auth.py",
+            line_start=42,
+            detection_method="ast",
+            confidence=0.95,
+            evidence="RSA_sign(...)",
+        ),
     ]
 
     cbom = generate_cbom(findings)
@@ -170,5 +192,5 @@ def test_serialized_cbom_contains_dependency_graph() -> None:
     assert '"application|payment-service"' in serialized
     assert '"library|OpenSSL|3.2"' in serialized
 
-    crypto_ref = component_fingerprint(findings[0])
+    crypto_ref = component_fingerprint(findings[1])
     assert f'"{crypto_ref}"' in serialized

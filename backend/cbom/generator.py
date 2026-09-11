@@ -5,17 +5,17 @@ from ..schemas.cbom import (
     AlgorithmProperties,
     CBOM,
     CBOMComponent,
+    CBOMDependency,
     CBOMProperty,
     CryptoProperties,
-    CBOMDependency,
 )
 from ..schemas.finding import Finding
 from .identifiers import (
     application_fingerprint,
     component_fingerprint,
+    crypto_asset_type,
     library_fingerprint,
 )
-
 
 def build_dependencies(
     findings: list[Finding],
@@ -49,14 +49,18 @@ def build_dependencies(
         if library_id not in application_dependency.depends_on:
             application_dependency.depends_on.append(library_id)
 
-        # Library -> Crypto asset
-        if finding.algorithm:
-            crypto_id = component_fingerprint(finding)
+        # Make sure the library itself has a dependency entry.
+        library_dependency = dependencies_by_ref.setdefault(
+            library_id,
+            CBOMDependency(ref=library_id),
+        )
 
-            library_dependency = dependencies_by_ref.setdefault(
-                library_id,
-                CBOMDependency(ref=library_id),
-            )
+        # Library -> Crypto asset
+        if (
+            finding.artifact_type == "crypto_algorithm"
+            and finding.algorithm
+        ):
+            crypto_id = component_fingerprint(finding)
 
             if crypto_id not in library_dependency.provides:
                 library_dependency.provides.append(crypto_id)
@@ -70,23 +74,32 @@ def generate_cbom(findings: list[Finding]) -> CBOM:
 
     components_by_id: dict[str, CBOMComponent] = {}
     libraries_by_id: dict[str, CBOMComponent] = {}
+    applications_by_id: dict[str, CBOMComponent] = {}
 
     for finding in findings:
         component_id = component_fingerprint(finding)
         finding_id = finding_fingerprint(finding)
-        applications_by_id: dict[str, CBOMComponent] = {}
-
         application_id = application_fingerprint(finding)
+
+        # --------------------------------------------------
+        # Application component
+        # --------------------------------------------------
 
         if application_id not in applications_by_id:
             applications_by_id[application_id] = CBOMComponent(
                 **{
                     "bom-ref": application_id,
                     "type": "application",
-                    "name": application_id.removeprefix("application|"),
+                    "name": application_id.removeprefix(
+                        "application|"
+                    ),
                     "properties": [],
                 }
             )
+
+        # --------------------------------------------------
+        # Library component
+        # --------------------------------------------------
 
         if finding.library:
             library_id = library_fingerprint(
@@ -110,6 +123,17 @@ def generate_cbom(findings: list[Finding]) -> CBOM:
                     }
                 )
 
+        # --------------------------------------------------
+        # Cryptographic asset
+        # --------------------------------------------------
+
+        asset_type = crypto_asset_type(finding)
+
+        # Dependency findings, for example, can create
+        # an application and library but not a crypto asset.
+        if asset_type is None:
+            continue
+
         if component_id not in components_by_id:
             components_by_id[component_id] = CBOMComponent(
                 **{
@@ -117,13 +141,14 @@ def generate_cbom(findings: list[Finding]) -> CBOM:
                     "type": "cryptographic-asset",
                     "name": (
                         finding.algorithm
-                        or finding.library
                         or finding.artifact_type
                     ),
                     "cryptoProperties": CryptoProperties(
-                        asset_type="algorithm",
-                        algorithm_properties=_algorithm_properties(
-                            finding
+                        asset_type=asset_type,
+                        algorithm_properties=(
+                            _algorithm_properties(finding)
+                            if asset_type == "algorithm"
+                            else None
                         ),
                     ),
                     "properties": [
@@ -148,6 +173,10 @@ def generate_cbom(findings: list[Finding]) -> CBOM:
             )
 
             continue
+
+        # --------------------------------------------------
+        # Aggregate additional evidence for existing asset
+        # --------------------------------------------------
 
         component = components_by_id[component_id]
 
@@ -178,6 +207,7 @@ def generate_cbom(findings: list[Finding]) -> CBOM:
                     value=finding.asset_path,
                 )
             )
+
     dependencies = build_dependencies(findings)
 
     return CBOM(
@@ -208,4 +238,3 @@ def _algorithm_properties(
             else finding.variant
         ),
     )
-

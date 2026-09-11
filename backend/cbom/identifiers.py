@@ -46,3 +46,28 @@ def application_fingerprint(finding: Finding) -> str:
         return "application|unknown"
 
     return f"application|{path.parts[0]}"
+
+def cbom_component_type(finding: Finding) -> str:
+    """
+    Map an ECDAT finding to its CycloneDX component type.
+    """
+
+    if finding.artifact_type == "dependency":
+        return "library"
+
+    return "cryptographic-asset"
+
+
+def crypto_asset_type(finding: Finding) -> str | None:
+    """
+    Map an ECDAT crypto finding to a CycloneDX crypto asset type.
+    """
+
+    mapping = {
+        "crypto_algorithm": "algorithm",
+        "certificate": "certificate",
+        "protocol": "protocol",
+        "crypto_material": "related-crypto-material",
+    }
+
+    return mapping.get(finding.artifact_type)
