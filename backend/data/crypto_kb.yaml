@@ -1,0 +1,356 @@
+# data/crypto_kb.yaml
+# ECDAT Cryptographic Knowledge Base
+# Consumed by: intelligence layer, source scanner (name normalization), CBOM generator
+
+version: "1.0.0"
+last_updated: "2026-09-11"
+
+algorithms:
+
+  # =======================================================
+  # ASYMMETRIC - KEY ESTABLISHMENT
+  # =======================================================
+
+  RSA:
+    family: RSA
+    aliases: ["RSA-OAEP", "RSA-PKCS1", "rsa"]
+    primitive_types: [KEY_ESTABLISHMENT, DIGITAL_SIGNATURE]
+    variants: [RSA-1024, RSA-2048, RSA-3072, RSA-4096]
+    key_size_thresholds:
+      weak_below: 2048
+      recommended: 3072
+    classical_status:
+      status: WEAK_BELOW_THRESHOLD
+      reason: "RSA below 2048 bits is deprecated by NIST SP 800-57"
+    quantum_status:
+      status: BROKEN
+      reason: "Shor's algorithm factors RSA in polynomial time"
+    recommendation:
+      KEY_ESTABLISHMENT:
+        direction: KEM
+        candidates: [ML-KEM-768, ML-KEM-1024]
+        hybrid: "X25519 + ML-KEM-768"
+      DIGITAL_SIGNATURE:
+        direction: SIGNATURE
+        candidates: [ML-DSA-65, ML-DSA-87, SLH-DSA-128s]
+        hybrid: "ECDSA P-256 + ML-DSA-65"
+
+  DH:
+    family: DH
+    aliases: ["Diffie-Hellman", "DHE", "DH-2048"]
+    primitive_types: [KEY_ESTABLISHMENT]
+    classical_status:
+      status: ACCEPTABLE
+      reason: "Sufficiently large DH groups are classically secure"
+    quantum_status:
+      status: BROKEN
+      reason: "Shor's algorithm solves the discrete log problem"
+    recommendation:
+      KEY_ESTABLISHMENT:
+        direction: KEM
+        candidates: [ML-KEM-768]
+        hybrid: "X25519 + ML-KEM-768"
+
+  ECDH:
+    family: ECC
+    aliases: ["ECDHE", "X25519", "Curve25519"]
+    primitive_types: [KEY_ESTABLISHMENT]
+    variants: [ECDH-P256, ECDH-P384, X25519]
+    classical_status:
+      status: ACCEPTABLE_ABOVE_256
+      reason: "ECDH P-256+ and X25519 are classically secure"
+    quantum_status:
+      status: BROKEN
+      reason: "Shor's algorithm solves the elliptic curve discrete log problem"
+    recommendation:
+      KEY_ESTABLISHMENT:
+        direction: KEM
+        candidates: [ML-KEM-768, ML-KEM-1024]
+        hybrid: "X25519 + ML-KEM-768"
+
+  # =======================================================
+  # ASYMMETRIC — DIGITAL SIGNATURE
+  # =======================================================
+
+  ECDSA:
+    family: ECC
+    aliases: ["ecdsa", "ECDSA-P256"]
+    primitive_types: [DIGITAL_SIGNATURE]
+    variants: [ECDSA-P256, ECDSA-P384, ECDSA-P521]
+    key_size_thresholds:
+      weak_below: 256
+      recommended: 384
+    classical_status:
+      status: ACCEPTABLE_ABOVE_256
+      reason: "ECDSA P-256+ is considered classically secure"
+    quantum_status:
+      status: BROKEN
+      reason: "Shor's algorithm solves the elliptic curve discrete log problem"
+    recommendation:
+      DIGITAL_SIGNATURE:
+        direction: SIGNATURE
+        candidates: [ML-DSA-65, SLH-DSA-128s]
+        hybrid: "ECDSA P-256 + ML-DSA-65"
+
+  EdDSA:
+    family: ECC
+    aliases: ["Ed25519", "Ed448"]
+    primitive_types: [DIGITAL_SIGNATURE]
+    classical_status:
+      status: STRONG
+      reason: "Ed25519/Ed448 are classically secure"
+    quantum_status:
+      status: BROKEN
+      reason: "Shor's algorithm solves the elliptic curve discrete log problem"
+    recommendation:
+      DIGITAL_SIGNATURE:
+        direction: SIGNATURE
+        candidates: [ML-DSA-65, SLH-DSA-128s]
+        hybrid: "Ed25519 + ML-DSA-65"
+
+  DSA:
+    family: DSA
+    aliases: ["dsa"]
+    primitive_types: [DIGITAL_SIGNATURE]
+    classical_status:
+      status: WEAK
+      reason: "DSA is deprecated by NIST; migrate to ECDSA or PQC"
+    quantum_status:
+      status: BROKEN
+      reason: "Shor's algorithm solves the discrete log problem"
+    recommendation:
+      DIGITAL_SIGNATURE:
+        direction: SIGNATURE
+        candidates: [ML-DSA-65, SLH-DSA-128s]
+
+  # =======================================================
+  # SYMMETRIC
+  # =======================================================
+
+  AES:
+    family: AES
+    aliases: ["aes", "AES-128", "AES-192", "AES-256", "Rijndael"]
+    primitive_types: [SYMMETRIC_ENCRYPTION]
+    variants: [AES-128, AES-192, AES-256]
+    modes: [GCM, CBC, CTR, ECB]
+    classical_status:
+      status: STRONG
+      reason: "AES is classically secure when properly used"
+    quantum_status:
+      status: WEAKENED
+      reason: "Grover's algorithm halves effective key security; AES-256 retains adequate margin"
+    recommendation:
+      SYMMETRIC_ENCRYPTION:
+        direction: SYMMETRIC
+        candidates: [AES-256]
+        note: "No PQC replacement exists for symmetric encryption. Increase key size."
+
+  ChaCha20:
+    family: ChaCha20
+    aliases: ["chacha20", "ChaCha20-Poly1305"]
+    primitive_types: [SYMMETRIC_ENCRYPTION]
+    classical_status:
+      status: STRONG
+      reason: "ChaCha20 is considered classically secure"
+    quantum_status:
+      status: RESILIENT
+      reason: "256-bit key retains 128-bit post-quantum security against Grover"
+    recommendation:
+      SYMMETRIC_ENCRYPTION:
+        direction: SYMMETRIC
+        candidates: [ChaCha20]
+        note: "Retain. Adequate post-quantum margin."
+
+  DES:
+    family: DES
+    aliases: ["des", "DES-56"]
+    primitive_types: [SYMMETRIC_ENCRYPTION]
+    classical_status:
+      status: BROKEN
+      reason: "56-bit key is brute-forceable in hours"
+    quantum_status:
+      status: BROKEN
+      reason: "Already broken classically; quantum offers no additional concern"
+    recommendation:
+      SYMMETRIC_ENCRYPTION:
+        direction: SYMMETRIC
+        candidates: [AES-256, ChaCha20]
+
+  TripleDES:
+    family: 3DES
+    aliases: ["3DES", "TDEA", "3des"]
+    primitive_types: [SYMMETRIC_ENCRYPTION]
+    classical_status:
+      status: WEAK
+      reason: "Sweet32 birthday attack; NIST deprecated 3DES as of 2023"
+    quantum_status:
+      status: WEAKENED
+      reason: "Grover halves effective security"
+    recommendation:
+      SYMMETRIC_ENCRYPTION:
+        direction: SYMMETRIC
+        candidates: [AES-256, ChaCha20]
+
+  RC4:
+    family: RC4
+    aliases: ["rc4", "ARCFOUR"]
+    primitive_types: [SYMMETRIC_ENCRYPTION]
+    classical_status:
+      status: BROKEN
+      reason: "Numerous statistical biases; prohibited in TLS since RFC 7465"
+    quantum_status:
+      status: BROKEN
+      reason: "Already broken classically"
+    recommendation:
+      SYMMETRIC_ENCRYPTION:
+        direction: SYMMETRIC
+        candidates: [AES-256, ChaCha20]
+
+  # =======================================================
+  # HASH
+  # =======================================================
+
+  MD5:
+    family: MD5
+    aliases: ["md5"]
+    primitive_types: [HASH]
+    classical_status:
+      status: BROKEN
+      reason: "Practical collision attacks since 2004"
+    quantum_status:
+      status: WEAKENED
+      reason: "Grover's algorithm weakens preimage resistance"
+    recommendation:
+      HASH:
+        direction: HASH
+        candidates: [SHA-256, SHA-3-256]
+
+  MD4:
+    family: MD4
+    aliases: ["md4"]
+    primitive_types: [HASH]
+    classical_status:
+      status: BROKEN
+      reason: "Collision attacks known since 1995"
+    quantum_status:
+      status: WEAKENED
+      reason: "Grover's algorithm weakens preimage resistance"
+    recommendation:
+      HASH:
+        direction: HASH
+        candidates: [SHA-256, SHA-3-256]
+
+  SHA1:
+    family: SHA1
+    aliases: ["sha1", "SHA-1"]
+    primitive_types: [HASH]
+    classical_status:
+      status: BROKEN
+      reason: "Practical collision attacks demonstrated (SHAttered, 2017)"
+    quantum_status:
+      status: WEAKENED
+      reason: "Grover's algorithm weakens preimage resistance"
+    recommendation:
+      HASH:
+        direction: HASH
+        candidates: [SHA-256, SHA-3-256]
+
+  SHA256:
+    family: SHA2
+    aliases: ["sha256", "SHA-256"]
+    primitive_types: [HASH]
+    classical_status:
+      status: STRONG
+      reason: "SHA-256 is considered classically secure"
+    quantum_status:
+      status: RESILIENT
+      reason: "Grover weakens but does not break SHA-256; 128-bit post-quantum security is adequate"
+    recommendation:
+      HASH:
+        direction: HASH
+        candidates: [SHA-256]
+        note: "Retain. No migration required for quantum reasons."
+
+  SHA384:
+    family: SHA2
+    aliases: ["sha384", "SHA-384"]
+    primitive_types: [HASH]
+    classical_status:
+      status: STRONG
+      reason: "SHA-384 is considered classically secure"
+    quantum_status:
+      status: RESILIENT
+      reason: "192-bit post-quantum security against Grover"
+    recommendation:
+      HASH:
+        direction: HASH
+        candidates: [SHA-384]
+        note: "Retain."
+
+  SHA512:
+    family: SHA2
+    aliases: ["sha512", "SHA-512"]
+    primitive_types: [HASH]
+    classical_status:
+      status: STRONG
+      reason: "SHA-512 is considered classically secure"
+    quantum_status:
+      status: RESILIENT
+      reason: "256-bit post-quantum security against Grover"
+    recommendation:
+      HASH:
+        direction: HASH
+        candidates: [SHA-512]
+        note: "Retain."
+
+  SHA3:
+    family: SHA3
+    aliases: ["SHA3-256", "SHA3-512", "sha3"]
+    primitive_types: [HASH]
+    classical_status:
+      status: STRONG
+      reason: "SHA-3 family is classically secure"
+    quantum_status:
+      status: RESILIENT
+      reason: "Adequate post-quantum margin"
+    recommendation:
+      HASH:
+        direction: HASH
+        candidates: [SHA3-256]
+        note: "Retain."
+
+  # =======================================================
+  # MAC
+  # =======================================================
+
+  HMAC:
+    family: HMAC
+    aliases: ["hmac", "HMAC-SHA256"]
+    primitive_types: [MAC]
+    classical_status:
+      status: STRONG
+      reason: "HMAC is considered classically secure when backed by a strong hash"
+    quantum_status:
+      status: RESILIENT
+      reason: "No known quantum break; Grover on underlying hash is manageable"
+    recommendation:
+      MAC:
+        direction: MAC
+        candidates: [HMAC-SHA256, HMAC-SHA3-256]
+        note: "Retain. Ensure underlying hash is not MD5 or SHA-1."
+
+  Poly1305:
+    family: Poly1305
+    aliases: ["poly1305"]
+    primitive_types: [MAC]
+    classical_status:
+      status: STRONG
+      reason: "Poly1305 is classically secure"
+    quantum_status:
+      status: RESILIENT
+      reason: "Adequate post-quantum margin"
+    recommendation:
+      MAC:
+        direction: MAC
+        candidates: [Poly1305]
+        note: "Retain."
