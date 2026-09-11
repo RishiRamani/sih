@@ -2,6 +2,7 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
+
 class AlgorithmProperties(BaseModel):
     """CycloneDX 1.7 algorithmProperties."""
 
@@ -42,6 +43,7 @@ class AlgorithmProperties(BaseModel):
         alias="nistQuantumSecurityLevel",
     )
 
+
 class CryptoProperties(BaseModel):
     """CycloneDX 1.7 cryptoProperties."""
 
@@ -55,6 +57,13 @@ class CryptoProperties(BaseModel):
     )
 
     oid: str | None = None
+
+
+class CBOMProperty(BaseModel):
+    """CycloneDX property."""
+
+    name: str
+    value: str
 
 
 class CBOMComponent(BaseModel):
@@ -71,24 +80,27 @@ class CBOMComponent(BaseModel):
     version: str | None = None
 
     crypto_properties: CryptoProperties = Field(
-        alias="cryptoProperties"
+        alias="cryptoProperties",
     )
 
-    # ECDAT-specific information can live in CycloneDX properties.
-    properties: dict[str, Any] = Field(default_factory=dict)
+    properties: list[CBOMProperty] = Field(
+        default_factory=list,
+    )
 
 
 class CBOMDependency(BaseModel):
-    """
-    CycloneDX dependency graph entry.
-    """
+    """CycloneDX dependency graph entry."""
 
     ref: str
+
     depends_on: list[str] = Field(
         default_factory=list,
         alias="dependsOn",
     )
-    provides: list[str] = Field(default_factory=list)
+
+    provides: list[str] = Field(
+        default_factory=list,
+    )
 
 
 class CBOM(BaseModel):
@@ -113,18 +125,20 @@ class CBOM(BaseModel):
         alias="specVersion",
     )
 
-    serial_number: str = Field(alias="serialNumber")
+    serial_number: str = Field(
+        alias="serialNumber",
+    )
 
     version: int = 1
 
     components: list[CBOMComponent] = Field(
-        default_factory=list
+        default_factory=list,
     )
 
     dependencies: list[CBOMDependency] = Field(
-        default_factory=list
+        default_factory=list,
     )
 
     metadata: dict[str, Any] = Field(
-        default_factory=dict
+        default_factory=dict,
     )
