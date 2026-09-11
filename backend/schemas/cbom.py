@@ -74,12 +74,13 @@ class CBOMComponent(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
     bom_ref: str = Field(alias="bom-ref")
-    type: str = "cryptographic-asset"
+    type: str
 
     name: str
     version: str | None = None
 
     crypto_properties: CryptoProperties = Field(
+        default=None,
         alias="cryptoProperties",
     )
 

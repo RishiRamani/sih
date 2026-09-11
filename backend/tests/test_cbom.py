@@ -3,6 +3,7 @@ from backend.schemas.finding import Finding
 from backend.cbom.serializer import serialize_cbom
 from backend.cbom.serializer import serialize_cbom
 from backend.cbom.validator import validate_cbom_json
+from backend.cbom.identifiers import component_fingerprint
 
 def test_findings_for_same_component_are_aggregated() -> None:
     findings = [
@@ -30,10 +31,23 @@ def test_findings_for_same_component_are_aggregated() -> None:
 
     cbom = generate_cbom(findings)
 
-    assert len(cbom.components) == 1
+    crypto_components = [
+        component
+        for component in cbom.components
+        if component.type == "cryptographic-asset"
+    ]
 
-    component = cbom.components[0]
+    assert len(crypto_components) == 1
 
+    component = crypto_components[0]
+
+    application_components = [
+        component
+        for component in cbom.components
+        if component.type == "application"
+    ]
+
+    assert len(application_components) == 1
 
     assert (
         component.crypto_properties.algorithm_properties.algorithm_family
@@ -100,3 +114,61 @@ def test_cbom_is_cyclonedx_1_7_valid() -> None:
     errors = validate_cbom_json(serialized)
 
     assert errors == [], "\n".join(errors)
+
+def test_application_depends_on_library() -> None:
+    findings = [
+        Finding(
+            artifact_type="dependency",
+            library="OpenSSL",
+            library_version="3.2",
+            algorithm="RSASSA-PKCS1",
+            asset_path="payment-service/requirements.txt",
+            detection_method="dependency",
+            confidence=0.95,
+        )
+    ]
+
+    cbom = generate_cbom(findings)
+
+    application_ref = "application|payment-service"
+    library_ref = "library|OpenSSL|3.2"
+    crypto_ref = component_fingerprint(findings[0])
+
+    application_dependency = next(
+        dependency
+        for dependency in cbom.dependencies
+        if dependency.ref == application_ref
+    )
+
+    library_dependency = next(
+        dependency
+        for dependency in cbom.dependencies
+        if dependency.ref == library_ref
+    )
+
+    assert library_ref in application_dependency.depends_on
+    assert crypto_ref in library_dependency.provides
+
+def test_serialized_cbom_contains_dependency_graph() -> None:
+    findings = [
+        Finding(
+            artifact_type="dependency",
+            library="OpenSSL",
+            library_version="3.2",
+            algorithm="RSASSA-PKCS1",
+            asset_path="payment-service/requirements.txt",
+            detection_method="dependency",
+            confidence=0.95,
+        )
+    ]
+
+    cbom = generate_cbom(findings)
+    serialized = serialize_cbom(cbom)
+
+    assert '"dependsOn"' in serialized
+    assert '"provides"' in serialized
+    assert '"application|payment-service"' in serialized
+    assert '"library|OpenSSL|3.2"' in serialized
+
+    crypto_ref = component_fingerprint(findings[0])
+    assert f'"{crypto_ref}"' in serialized

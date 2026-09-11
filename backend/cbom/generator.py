@@ -7,10 +7,61 @@ from ..schemas.cbom import (
     CBOMComponent,
     CBOMProperty,
     CryptoProperties,
+    CBOMDependency,
 )
 from ..schemas.finding import Finding
-from .identifiers import component_fingerprint
+from .identifiers import (
+    application_fingerprint,
+    component_fingerprint,
+    library_fingerprint,
+)
 
+
+def build_dependencies(
+    findings: list[Finding],
+) -> list[CBOMDependency]:
+    """
+    Build CycloneDX dependency relationships.
+
+    Applications depend on discovered libraries.
+    Libraries provide discovered cryptographic assets.
+    """
+
+    dependencies_by_ref: dict[str, CBOMDependency] = {}
+
+    for finding in findings:
+        if not finding.library:
+            continue
+
+        application_id = application_fingerprint(finding)
+
+        library_id = library_fingerprint(
+            finding.library,
+            finding.library_version,
+        )
+
+        # Application -> Library
+        application_dependency = dependencies_by_ref.setdefault(
+            application_id,
+            CBOMDependency(ref=application_id),
+        )
+
+        if library_id not in application_dependency.depends_on:
+            application_dependency.depends_on.append(library_id)
+
+        # Library -> Crypto asset
+        if finding.algorithm:
+            crypto_id = component_fingerprint(finding)
+
+            library_dependency = dependencies_by_ref.setdefault(
+                library_id,
+                CBOMDependency(ref=library_id),
+            )
+
+            if crypto_id not in library_dependency.provides:
+                library_dependency.provides.append(crypto_id)
+
+    return list(dependencies_by_ref.values())
 
 def generate_cbom(findings: list[Finding]) -> CBOM:
     """
@@ -18,15 +69,52 @@ def generate_cbom(findings: list[Finding]) -> CBOM:
     """
 
     components_by_id: dict[str, CBOMComponent] = {}
+    libraries_by_id: dict[str, CBOMComponent] = {}
 
     for finding in findings:
         component_id = component_fingerprint(finding)
         finding_id = finding_fingerprint(finding)
+        applications_by_id: dict[str, CBOMComponent] = {}
+
+        application_id = application_fingerprint(finding)
+
+        if application_id not in applications_by_id:
+            applications_by_id[application_id] = CBOMComponent(
+                **{
+                    "bom-ref": application_id,
+                    "type": "application",
+                    "name": application_id.removeprefix("application|"),
+                    "properties": [],
+                }
+            )
+
+        if finding.library:
+            library_id = library_fingerprint(
+                finding.library,
+                finding.library_version,
+            )
+
+            if library_id not in libraries_by_id:
+                libraries_by_id[library_id] = CBOMComponent(
+                    **{
+                        "bom-ref": library_id,
+                        "type": "library",
+                        "name": finding.library,
+                        "version": finding.library_version,
+                        "properties": [
+                            CBOMProperty(
+                                name="ecdat:assetPath",
+                                value=finding.asset_path,
+                            )
+                        ],
+                    }
+                )
 
         if component_id not in components_by_id:
             components_by_id[component_id] = CBOMComponent(
                 **{
                     "bom-ref": component_id,
+                    "type": "cryptographic-asset",
                     "name": (
                         finding.algorithm
                         or finding.library
@@ -90,11 +178,16 @@ def generate_cbom(findings: list[Finding]) -> CBOM:
                     value=finding.asset_path,
                 )
             )
+    dependencies = build_dependencies(findings)
 
     return CBOM(
         serialNumber=f"urn:uuid:{uuid4()}",
-        components=list(components_by_id.values()),
-        dependencies=[],
+        components=[
+            *applications_by_id.values(),
+            *libraries_by_id.values(),
+            *components_by_id.values(),
+        ],
+        dependencies=dependencies,
     )
 
 
@@ -115,3 +208,4 @@ def _algorithm_properties(
             else finding.variant
         ),
     )
+
