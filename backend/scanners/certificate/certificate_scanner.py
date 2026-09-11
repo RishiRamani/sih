@@ -39,29 +39,32 @@ class CertificateScanner(BaseScanner):
             return []
 
         return [
-            Finding(
-                artifact_type="certificate",
-                algorithm=result["algorithm"],
-                primitive_type="signature",
-                variant=result["signature_algorithm"],
-                key_size=result["key_size"],
-                library=None,
-                library_version=None,
-                asset_path=str(target),
-                line_start=None,
-                line_end=None,
-                detection_method="X509_CERTIFICATE",
-                confidence=1.0,
-                evidence=(
-                    f"X.509 certificate with "
-                    f"{result['algorithm']} public key"
-                ),
-                metadata={
-                    "subject": result["subject"],
-                    "issuer": result["issuer"],
-                    "signature_algorithm": result["signature_algorithm"],
-                    "not_valid_before": result["not_valid_before"],
-                    "not_valid_after": result["not_valid_after"],
-                },
-            )
-        ]
+    Finding(
+        artifact_type="certificate",
+        algorithm=result["algorithm"],
+        primitive_type="asymmetric",
+        variant=result["curve"],
+        key_size=result["key_size"],
+        library=None,
+        library_version=None,
+        asset_path=str(target),
+        line_start=None,
+        line_end=None,
+        detection_method="X509_CERTIFICATE",
+        confidence=1.0,
+        evidence=(
+            f"X.509 certificate with "
+            f"{result['algorithm']} public key"
+        ),
+        metadata={
+            "curve": result["curve"],
+            "signature_algorithm": result["signature_algorithm"],
+            "signature_oid": result["signature_oid"],
+            "subject": result["subject"],
+            "issuer": result["issuer"],
+            "san": result["san"],
+            "not_valid_before": result["not_valid_before"],
+            "not_valid_after": result["not_valid_after"],
+        },
+    )
+]
