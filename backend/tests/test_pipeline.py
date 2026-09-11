@@ -33,8 +33,8 @@ class FakeScanner(BaseScanner):
 def test_pipeline():
     pipeline = ScanPipeline([FakeScanner()])
 
-    findings = pipeline.run(Path("demo.py"))
+    result = pipeline.run(Path("demo.py"))
 
-    assert len(findings) == 1
-    assert findings[0].algorithm == "RSA"
-    assert findings[0].key_size == 2048
+    assert len(result.findings) == 1
+    assert result.findings[0].algorithm == "RSA"
+    assert result.findings[0].key_size == 2048

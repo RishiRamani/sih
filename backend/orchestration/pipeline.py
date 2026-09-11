@@ -1,7 +1,9 @@
 from pathlib import Path
 
+from ..cbom.generator import generate_cbom
 from ..normalization.normalizer import normalize_findings
 from ..schemas.finding import Finding
+from ..schemas.scan import ScanResult, ScanStatus
 from ..scanners.base import BaseScanner
 
 
@@ -13,7 +15,7 @@ class ScanPipeline:
     def __init__(self, scanners: list[BaseScanner]) -> None:
         self.scanners = scanners
 
-    def run(self, target: Path) -> list[Finding]:
+    def run(self, target: Path) -> ScanResult:
         raw_findings: list[Finding] = []
 
         for scanner in self.scanners:
@@ -30,4 +32,13 @@ class ScanPipeline:
                     f"{type(exc).__name__}: {exc}"
                 )
 
-        return normalize_findings(raw_findings)
+        findings = normalize_findings(raw_findings)
+        cbom = generate_cbom(findings)
+
+        return ScanResult(
+            target_path=str(target),
+            status=ScanStatus.COMPLETED,
+            findings=findings,
+            cbom=cbom,
+            total_findings=len(findings),
+        )
