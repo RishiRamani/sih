@@ -1,5 +1,5 @@
 import ast
-from schemas.finding import Finding
+from ...schemas.finding import Finding
 
 CUSTOM_CRYPTO_CONFIDENCE = 0.4  # advisory only, not a proven detection
 

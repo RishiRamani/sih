@@ -1,4 +1,4 @@
-from schemas.finding import Finding
+from ...schemas.finding import Finding
 from .algorithm_rules import api_signatures_for_language
 from .key_size_extractor import extract_key_size_from_match
 

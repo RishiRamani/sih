@@ -267,17 +267,71 @@ def generate_cbom(findings: list[Finding]) -> CBOM:
     )
 
 
-def _algorithm_properties(
-    finding: Finding,
-) -> AlgorithmProperties:
-    """
-    Map ECDAT's normalized finding into CycloneDX
-    algorithm properties.
-    """
+def _cyclonedx_algorithm_family(finding: Finding) -> str | None:
+    """Normalize scanner algorithm names to CycloneDX 1.7 registry values.
 
+    These are prototype-level heuristics. The exact RSA construction cannot
+    always be known from source-level evidence alone.
+    """
+    algorithm = finding.algorithm
+    primitive = finding.primitive_type
+
+    if algorithm == "RSA":
+        if primitive == "signature":
+            return "RSASSA-PKCS1"
+        if primitive == "asymmetric":
+            return "RSAES-PKCS1"
+        return "RSA"
+
+    mapping = {
+        "AES": "AES",
+        "DES": "DES",
+        "3DES": "3DES",
+        "TripleDES": "3DES",
+        "ECDSA": "ECDSA",
+        "ECDH": "ECDH",
+        "DSA": "DSA",
+        "DH": "DH",
+        "Ed25519": "Ed25519",
+        "Ed448": "Ed448",
+        "SHA1": "SHA-1",
+        "SHA-224": "SHA-2",
+        "SHA256": "SHA-2",
+        "SHA384": "SHA-2",
+        "SHA512": "SHA-2",
+        "SHA2": "SHA-2",
+        "SHA3": "SHA-3",
+        "SHA3-256": "SHA-3",
+        "SHA3-384": "SHA-3",
+        "SHA3-512": "SHA-3",
+        "MD5": "MD5",
+        "BLAKE2": "BLAKE2",
+    }
+
+    return mapping.get(algorithm, algorithm)
+
+
+def _cyclonedx_primitive(finding: Finding) -> str | None:
+    mapping = {
+        "signature": "signature",
+        "hash": "hash",
+        "symmetric": "block-cipher",
+        "asymmetric": "pke",
+        "key_exchange": "key-agree",
+        "key_agreement": "key-agree",
+        "kdf": "kdf",
+        "mac": "mac",
+        "custom": "other",
+        "unknown": "unknown",
+    }
+
+    return mapping.get(finding.primitive_type, finding.primitive_type)
+
+
+def _algorithm_properties(finding: Finding) -> AlgorithmProperties:
     return AlgorithmProperties(
-        primitive=finding.primitive_type,
-        algorithm_family=finding.algorithm,
+        primitive=_cyclonedx_primitive(finding),
+        algorithm_family=_cyclonedx_algorithm_family(finding),
         parameter_set_identifier=(
             str(finding.key_size)
             if finding.key_size is not None

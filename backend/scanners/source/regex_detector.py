@@ -1,4 +1,4 @@
-from schemas.finding import Finding
+from ...schemas.finding import Finding
 from .algorithm_rules import lexical_matches
 
 LEXICAL_CONFIDENCE = 0.35

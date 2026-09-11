@@ -1,5 +1,5 @@
 import ast
-from schemas.finding import Finding
+from ...schemas.finding import Finding
 
 AST_CONFIDENCE = 0.95
 

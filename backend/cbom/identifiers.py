@@ -60,11 +60,17 @@ def cbom_component_type(finding: Finding) -> str:
 
 def crypto_asset_type(finding: Finding) -> str | None:
     """
-    Map an ECDAT crypto finding to a CycloneDX crypto asset type.
+    Determine the CycloneDX cryptographic asset type represented
+    by a finding.
     """
 
+    if finding.artifact_type in {
+        "crypto_algorithm",
+        "source",
+    } and finding.algorithm:
+        return "algorithm"
+
     mapping = {
-        "crypto_algorithm": "algorithm",
         "certificate": "certificate",
         "protocol": "protocol",
         "crypto_material": "related-crypto-material",
