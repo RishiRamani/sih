@@ -10,7 +10,7 @@ Never recommend a KEM for a signature or vice versa.
 """
 
 from typing import Any
-from intelligence.crypto_kb import get_recommendation, lookup_algorithm
+from .crypto_kb import get_recommendation, lookup_algorithm
 
 # Migration priority derived from risk severity.
 PRIORITY_BY_SEVERITY = {

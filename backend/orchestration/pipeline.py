@@ -5,6 +5,7 @@ from ..normalization.normalizer import normalize_findings
 from ..schemas.finding import Finding
 from ..schemas.scan import ScanResult, ScanStatus
 from ..scanners.base import BaseScanner
+from ..intelligence.evaluator import assess_findings
 
 
 class ScanPipeline:
@@ -15,7 +16,11 @@ class ScanPipeline:
     def __init__(self, scanners: list[BaseScanner]) -> None:
         self.scanners = scanners
 
-    def run(self, target: Path) -> ScanResult:
+    def run(
+        self,
+        target: Path,
+        application_name_override: str | None = None,
+    ) -> ScanResult:
         raw_findings: list[Finding] = []
 
         for scanner in self.scanners:
@@ -33,12 +38,19 @@ class ScanPipeline:
                 )
 
         findings = normalize_findings(raw_findings)
-        cbom = generate_cbom(findings)
+
+        intelligence = assess_findings(findings)
+
+        cbom = generate_cbom(
+            findings,
+            application_name_override=application_name_override,
+        )
 
         return ScanResult(
             target_path=str(target),
             status=ScanStatus.COMPLETED,
             findings=findings,
+            intelligence=intelligence,
             cbom=cbom,
             total_findings=len(findings),
         )

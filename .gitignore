@@ -24,6 +24,7 @@ Thumbs.db
 # Generated
 backend/data/uploads/
 backend/data/workspaces/
+backend/data/ecdat.db
 
 #exe
 *exe

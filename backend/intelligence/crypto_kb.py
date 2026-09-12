@@ -30,34 +30,27 @@ def get_kb_version() -> str:
 
 def lookup_algorithm(name: str) -> Optional[dict[str, Any]]:
     """
-    Look up an algorithm entry by canonical name.
+    Look up an algorithm entry by canonical name or alias.
 
-    Handles common aliases:
-      'rsa' -> 'RSA'
-      'sha-1' -> 'SHA1'
-      'aes-256-gcm' -> 'AES'
-
-    Returns None if the algorithm is not in the KB.
-    Unknown algorithms must be treated as UNKNOWN, never as safe.
+    Algorithm names are normalized case-insensitively and with hyphens /
+    underscores removed.
     """
     kb = load_kb()
     algorithms = kb.get("algorithms", {})
 
-    # Normalize the input
     normalized = _normalize_name(name)
 
-    # Direct hit
-    if normalized in algorithms:
-        return algorithms[normalized]
-
-    # Alias resolution
+    # Canonical-name lookup
     for canonical, entry in algorithms.items():
+        if _normalize_name(canonical) == normalized:
+            return entry
+
+        # Alias lookup
         aliases = entry.get("aliases", [])
-        if normalized in [_normalize_name(a) for a in aliases]:
+        if any(_normalize_name(alias) == normalized for alias in aliases):
             return entry
 
     return None
-
 
 def _normalize_name(name: str) -> str:
     """Normalize algorithm name for lookup: strip hyphens, uppercase."""

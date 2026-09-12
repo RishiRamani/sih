@@ -9,7 +9,7 @@ Does not hardcode algorithm knowledge.
 """
 
 from typing import Any
-from intelligence.crypto_kb import lookup_algorithm
+from .crypto_kb import lookup_algorithm
 
 
 # Severity mapping for classical statuses.
