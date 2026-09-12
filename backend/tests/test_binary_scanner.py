@@ -1,4 +1,6 @@
 from pathlib import Path
+import shutil
+import subprocess
 
 from backend.scanners.binary.format_detector import BinaryFormatDetector
 from backend.scanners.binary.strings import BinaryStringExtractor
@@ -48,6 +50,24 @@ def test_ignores_short_strings(tmp_path):
     assert "abc" not in strings
     assert "hello" in strings
 
+def test_extracts_three_character_crypto_strings(tmp_path):
+    binary_path = tmp_path / "test.bin"
+
+    binary_path.write_bytes(
+        b"\x00RSA\x00"
+        b"\x00MD5\x00"
+        b"\x00AES\x00"
+        b"\x00hello\x00"
+    )
+
+    extractor = BinaryStringExtractor()
+
+    strings = extractor.extract(binary_path)
+
+    assert "RSA" in strings
+    assert "MD5" in strings
+    assert "AES" in strings
+    assert "hello" in strings
 
 def test_missing_file(tmp_path):
     binary_path = tmp_path / "missing.bin"
@@ -145,3 +165,28 @@ def test_binary_scanner_name():
     scanner = BinaryScanner()
 
     assert scanner.name == "Binary Crypto Scanner"
+
+def test_demo_binary_scanner(tmp_path):
+    source = Path("backend/data/demo/binaries/demo_crypto.cpp")
+    output = tmp_path / "demo_crypto.exe"
+
+    if shutil.which("g++") is None:
+        return
+
+    subprocess.run(
+        ["g++", str(source), "-o", str(output)],
+        check=True,
+    )
+
+    scanner = BinaryScanner()
+    findings = scanner.scan(output)
+
+    algorithms = [finding.algorithm for finding in findings]
+
+    assert "AES" in algorithms
+    assert "RSA" in algorithms
+    assert "ECDSA" in algorithms
+    assert "ECDH" in algorithms
+    assert "SHA-256" in algorithms
+    assert "SHA-1" in algorithms
+    assert "MD5" in algorithms

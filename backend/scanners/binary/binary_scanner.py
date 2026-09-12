@@ -59,12 +59,16 @@ class BinaryScanner(BaseScanner):
                     )
 
             for value in symbols.get("imports", []):
+                value = str(value)
+
                 if signature.name.lower() in value.lower():
                     evidence_sources.append(
                         f"import: {value}"
                     )
 
             for value in symbols.get("exports", []):
+                value = str(value)
+
                 if signature.name.lower() in value.lower():
                     evidence_sources.append(
                         f"export: {value}"
