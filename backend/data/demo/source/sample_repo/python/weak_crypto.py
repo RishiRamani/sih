@@ -3,6 +3,8 @@ import hashlib
 from Crypto.PublicKey import RSA
 from Crypto.Cipher import AES, DES
 
+# TODO: replace MD5 with SHA-256 once the migration ticket lands
+
 
 def make_rsa_key():
     # weak key size - should trigger a CRITICAL risk result downstream
@@ -23,6 +25,6 @@ def encrypt_legacy(data, key):
     return cipher.encrypt(data)
 
 
-def encrypt_aes(data, key):
-    cipher = AES.new(key, AES.MODE_CBC)
+def encrypt_aes(data, key, iv):
+    cipher = AES.new(key, AES.MODE_GCM, nonce=iv)
     return cipher.encrypt(data)

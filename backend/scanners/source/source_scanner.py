@@ -6,7 +6,10 @@ from .custom_crypto import detect_custom_crypto
 
 # detection-method precedence, used only to decide which method label
 # "wins" when the same underlying usage is confirmed by multiple layers
-_METHOD_RANK = {"AST": 3, "API_SIGNATURE": 2, "LEXICAL": 1, "CUSTOM_HEURISTIC": 1}
+_METHOD_RANK = {
+    "AST": 3, "API_SIGNATURE": 2, "LEXICAL": 1,
+    "CUSTOM_HEURISTIC": 1, "LEXICAL_COMMENT": 0,
+}
 
 
 def _read_file(path: str):
@@ -18,11 +21,7 @@ def _read_file(path: str):
 
 
 def _merge_duplicates(findings):
-    """Findings that point at the same (file, line, algorithm) are merged
-    into one, keeping the higher confidence and combining detection
-    methods. This is the multi-signal dedup described in
-    SYSTEM_DESIGN.md section 19 ("Multi-Signal Detection and
-    Deduplication")."""
+    
     merged = {}
     for finding in findings:
         key = (finding.asset_path, finding.line_start, finding.algorithm)
