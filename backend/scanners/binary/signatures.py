@@ -154,8 +154,8 @@ class CryptoSignatureDetector:
     ) -> list[CryptoSignature]:
         evidence = set(strings)
 
-        evidence.update(symbols.get("imports", []))
-        evidence.update(symbols.get("exports", []))
+        evidence.update(str(value) for value in symbols.get("imports", []))
+        evidence.update(str(value) for value in symbols.get("exports", []))
 
         matches = []
 

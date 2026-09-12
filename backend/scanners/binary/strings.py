@@ -8,7 +8,7 @@ class BinaryStringExtractor:
     This is a static analysis step. The binary is never executed.
     """
 
-    def __init__(self, min_length: int = 4):
+    def __init__(self, min_length: int = 3):
         self.min_length = min_length
 
     def extract(self, path: Path) -> list[str]:
