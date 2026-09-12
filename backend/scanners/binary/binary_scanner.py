@@ -71,6 +71,12 @@ class BinaryScanner(BaseScanner):
                     )
 
             evidence = "; ".join(evidence_sources)
+            metadata = {
+                "binary_format": binary_format,
+                "signature": signature.name,
+            }
+            if signature.mode:
+                metadata["mode"] = signature.mode
 
             findings.append(
                 Finding(
@@ -93,11 +99,7 @@ class BinaryScanner(BaseScanner):
                     evidence=(
                         f"{binary_format} binary: {evidence}"
                     ),
-                    metadata={
-                        "binary_format": binary_format,
-                        "signature": signature.name,
-                        "mode": signature.mode,
-                    },
+                    metadata=metadata,
                 )
             )
 

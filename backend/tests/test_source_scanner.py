@@ -16,6 +16,7 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO_ROOT))
 
 from backend.scanners.source.source_scanner import scan_source
+from backend.scanners.source.api_detector import detect_api_signatures
 
 
 # Actual demo repository used by the integration tests.
@@ -187,22 +188,40 @@ class TestSourceScanner(unittest.TestCase):
             )
         )
 
-    def test_aes_mode_captured_in_variant(self):
-        aes_findings = [
-            f for f in self.findings
-            if finding_value(f, "algorithm") == "AES"
-        ]
-
-        modes_seen = {
-            finding_value(f, "variant")
-            for f in aes_findings
-            if finding_value(f, "variant")
+    def test_aes_modes_are_optional_metadata(self):
+        cases = {
+            "GCM": "algorithms.AES(key), modes.GCM(iv)",
+            "CBC": "algorithms.AES(key), modes.CBC(iv)",
+            "ECB": "algorithms.AES(key), modes.ECB()",
+            "CTR": "algorithms.AES(key), modes.CTR(nonce)",
         }
 
-        self.assertTrue(
-            any("GCM" in v for v in modes_seen),
-            f"expected an AES finding with GCM captured in variant, got {modes_seen}",
+        for expected_mode, source_line in cases.items():
+            with self.subTest(mode=expected_mode):
+                findings = detect_api_signatures(
+                    "example.py",
+                    source_line,
+                    "python",
+                )
+                aes_finding = next(
+                    finding for finding in findings
+                    if finding_value(finding, "algorithm") == "AES"
+                )
+                self.assertEqual(
+                    finding_value(aes_finding, "metadata")["mode"],
+                    expected_mode,
+                )
+
+        generic_findings = detect_api_signatures(
+            "example.py",
+            "cipher = algorithms.AES(key)",
+            "python",
         )
+        generic_aes = next(
+            finding for finding in generic_findings
+            if finding_value(finding, "algorithm") == "AES"
+        )
+        self.assertNotIn("mode", finding_value(generic_aes, "metadata"))
 
     def test_comment_only_lexical_hits_get_lower_confidence(self):
         comment_findings = [

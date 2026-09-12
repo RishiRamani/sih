@@ -169,9 +169,7 @@ API_SIGNATURES = [
 # ---------------- AES/DES block-cipher MODE detection (Day 3) ----------
 # Separate from API_SIGNATURES because a mode is a *qualifier* on an
 # already-detected cipher, not a standalone algorithm. Captured into the
-# finding's `variant` field (e.g. "AES-GCM") rather than a new contract
-# field, since the shared finding contract (WORK_DIVISION.md sec 3) has
-# no dedicated `mode` field.
+# finding's optional metadata rather than treated as a standalone algorithm.
 MODE_PATTERNS = [
     dict(pattern=r"\bMODE_GCM\b|modes\.GCM\(|/GCM/|-gcm", mode="GCM"),
     dict(pattern=r"\bMODE_CTR\b|modes\.CTR\(|/CTR/|-ctr", mode="CTR"),

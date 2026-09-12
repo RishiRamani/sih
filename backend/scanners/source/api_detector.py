@@ -5,7 +5,7 @@ from .key_size_extractor import extract_key_size_from_match
 API_CONFIDENCE = 0.75
 
 # algorithms for which a detected block-cipher mode is meaningful to
-# append to the variant (only symmetric block ciphers have a "mode")
+# capture in finding metadata (only symmetric block ciphers have a mode)
 _MODE_AWARE_ALGORITHMS = {"AES", "DES", "3DES"}
 
 
@@ -24,6 +24,9 @@ def detect_api_signatures(file_path: str, source_text: str, language: str):
                 continue
 
             key_size = extract_key_size_from_match(match, sig["algorithm"])
+            mode = None
+            if sig["algorithm"] in _MODE_AWARE_ALGORITHMS:
+                mode = detect_mode_on_line(line)
 
             # A signature can pin a fixed variant (e.g. algorithm="EdDSA",
             # variant="Ed25519") when the call site names a specific curve
@@ -40,10 +43,6 @@ def detect_api_signatures(file_path: str, source_text: str, language: str):
                 variant_parts = [sig["algorithm"]]
                 if key_size:
                     variant_parts.append(str(key_size))
-                if sig["algorithm"] in _MODE_AWARE_ALGORITHMS:
-                    mode = detect_mode_on_line(line)
-                    if mode:
-                        variant_parts.append(mode)
                 variant = "-".join(variant_parts) if len(variant_parts) > 1 else None
 
             findings.append(Finding(
@@ -60,5 +59,6 @@ def detect_api_signatures(file_path: str, source_text: str, language: str):
                 detection_method="API_SIGNATURE",
                 confidence=API_CONFIDENCE,
                 evidence=line.strip()[:200],
+                metadata={"mode": mode} if mode else {},
             ))
     return findings
