@@ -1,26 +1,72 @@
-@import "tailwindcss";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --font-sans: "Inter", "IBM Plex Sans", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", "JetBrains Mono", ui-monospace, monospace;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+/* Dark mode (default) — midnight steel */
+.dark {
+  --color-base: 11 17 24;          /* #0B1118 */
+  --color-surface: 17 26 36;       /* #111A24 */
+  --color-elevated: 23 35 49;      /* #172331 */
+  --color-border: 38 52 69;        /* #263445 */
+  --color-accent: 77 141 255;      /* #4D8DFF */
+  --color-teal: 79 179 179;        /* #4FB3B3 */
+  --color-text-primary: 230 236 242;
+  --color-text-secondary: 143 163 184;
+  --color-amber: 217 155 55;
+  --color-crimson: 224 90 94;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* Light mode */
+.light {
+  --color-base: 244 247 250;       /* #F4F7FA */
+  --color-surface: 255 255 255;    /* #FFFFFF */
+  --color-elevated: 234 240 245;   /* #EAF0F5 */
+  --color-border: 214 224 232;     /* #D6E0E8 */
+  --color-accent: 53 105 200;      /* #3569C8 */
+  --color-teal: 40 127 130;        /* #287F82 */
+  --color-text-primary: 23 37 54;  /* #172536 */
+  --color-text-secondary: 91 114 134;
+  --color-amber: 178 122 15;
+  --color-crimson: 191 53 58;
+}
+
+html, body {
+  height: 100%;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background-color: rgb(var(--color-base));
+  color: rgb(var(--color-text-primary));
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+* {
+  border-color: rgb(var(--color-border));
+}
+
+::selection {
+  background-color: rgb(var(--color-accent) / 0.3);
+}
+
+:focus-visible {
+  outline: 2px solid rgb(var(--color-accent));
+  outline-offset: 2px;
+}
+
+/* Scrollbars */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background-color: rgb(var(--color-border));
+  border-radius: 8px;
+}
+
+.font-mono-tabular {
+  font-variant-numeric: tabular-nums;
 }

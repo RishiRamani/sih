@@ -1,0 +1,210 @@
+// ECDAT domain types.
+//
+// These mirror the API/DB specification's response schemas. Field names
+// must stay in lockstep with the finalized backend contract — when that
+// contract lands, update this file first and the rest of the app follows,
+// since every page consumes these types rather than ad-hoc shapes.
+
+export type ScanStatus =
+  | "CREATED"
+  | "QUEUED"
+  | "DISCOVERING"
+  | "ANALYSING"
+  | "NORMALIZING"
+  | "BUILDING_CBOM"
+  | "ASSESSING_RISK"
+  | "GENERATING_RECOMMENDATIONS"
+  | "COMPLETED"
+  | "FAILED";
+
+export const SCAN_STATUS_ORDER: ScanStatus[] = [
+  "CREATED",
+  "QUEUED",
+  "DISCOVERING",
+  "ANALYSING",
+  "NORMALIZING",
+  "BUILDING_CBOM",
+  "ASSESSING_RISK",
+  "GENERATING_RECOMMENDATIONS",
+  "COMPLETED"
+];
+
+export type AssetInputType =
+  | "SOURCE_REPOSITORY"
+  | "SOURCE_ARCHIVE"
+  | "BINARY_LIBRARY"
+  | "CONTAINER_IMAGE"
+  | "CERTIFICATE"
+  | "DEPENDENCY_MANIFEST";
+
+export interface ScanWarning {
+  code: string;
+  message: string;
+  path?: string;
+}
+
+export interface ScanCoverage {
+  filesScanned: number;
+  filesTotal: number;
+  unsupportedFiles: number;
+  parseErrors: number;
+  warnings: ScanWarning[];
+}
+
+export interface Scan {
+  id: string;
+  name: string;
+  inputType: AssetInputType;
+  sourceLabel: string; // repo URL, filename, image ref, etc.
+  status: ScanStatus;
+  progressPercent: number;
+  createdAt: string;
+  startedAt?: string;
+  completedAt?: string;
+  requestedBy?: string;
+  findingCount?: number;
+  highRiskCount?: number;
+  coverage?: ScanCoverage;
+  errorMessage?: string;
+}
+
+export type PrimitiveType =
+  | "SYMMETRIC_CIPHER"
+  | "ASYMMETRIC_CIPHER"
+  | "KEY_EXCHANGE"
+  | "DIGITAL_SIGNATURE"
+  | "HASH"
+  | "MAC"
+  | "KDF"
+  | "RNG"
+  | "CERTIFICATE"
+  | "PROTOCOL"
+  | "CUSTOM_UNKNOWN";
+
+export type DetectionMethod =
+  | "STATIC_AST"
+  | "API_CALL_SIGNATURE"
+  | "CONFIG_FILE"
+  | "CERTIFICATE_PARSE"
+  | "DEPENDENCY_MANIFEST"
+  | "BINARY_SYMBOL"
+  | "HEURISTIC_STRING_MATCH"
+  | "TLS_HANDSHAKE_METADATA";
+
+export type Confidence = "HIGH" | "MEDIUM" | "LOW";
+
+export type ExposureStatus =
+  | "SAFE"
+  | "WEAK"
+  | "BROKEN"
+  | "DEPRECATED"
+  | "UNKNOWN";
+
+export type RiskLevel = "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
+
+export type BusinessCriticality = "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
+
+export type DataLifetime = "SHORT" | "MEDIUM" | "LONG" | "INDEFINITE";
+
+export type MigrationEffort = "LOW" | "MEDIUM" | "HIGH" | "UNKNOWN";
+
+export type MigrationDirection =
+  | "ML_KEM"
+  | "HYBRID_KEM"
+  | "ML_DSA"
+  | "SLH_DSA"
+  | "STRONGER_SYMMETRIC"
+  | "APPROVED_HASH"
+  | "VETTED_STANDARD_REVIEW"
+  | "NO_ACTION";
+
+export interface Recommendation {
+  id: string;
+  findingId: string;
+  currentTechnology: string;
+  affectedComponents: string[];
+  reason: string;
+  direction: MigrationDirection;
+  candidateAlgorithm: string;
+  priority: RiskLevel;
+  status: "NOT_STARTED" | "IN_PROGRESS" | "MITIGATED" | "ACCEPTED_RISK";
+  rationale: string;
+  effort?: MigrationEffort;
+  tradeOffs?: string;
+  isExperimental?: boolean;
+}
+
+// A normalized cryptographic artefact — the canonical finding model.
+// Every page that touches a finding uses exactly this shape.
+export interface Finding {
+  id: string;
+  scanId: string;
+  assetType: AssetInputType;
+  algorithm: string;
+  variant?: string;
+  primitiveType: PrimitiveType;
+  keySize?: number | "Unknown";
+  mode?: string;
+  parameterSet?: string;
+  library?: string;
+  libraryVersion?: string;
+  protocol?: string;
+  sourcePath?: string;
+  lineStart?: number;
+  lineEnd?: number;
+  inputType: AssetInputType;
+  detectionMethods: DetectionMethod[];
+  evidence?: string;
+  confidence: Confidence;
+  classicalStatus: ExposureStatus;
+  quantumStatus: ExposureStatus;
+  dataLifetime?: DataLifetime | "Unknown";
+  businessCriticality?: BusinessCriticality | "Unknown";
+  migrationTime?: MigrationEffort;
+  riskLevel: RiskLevel;
+  riskScore: number; // 0-100, backend-computed
+  riskExplanation?: string;
+  recommendation?: Recommendation;
+  isAssumption?: {
+    dataLifetime?: boolean;
+    businessCriticality?: boolean;
+  };
+}
+
+export interface CbomComponent {
+  application: string;
+  library: string;
+  libraryVersion?: string;
+}
+
+export interface RiskDistributionBucket {
+  level: RiskLevel;
+  count: number;
+}
+
+export interface QuantumReadinessSummary {
+  crqcScenario: string; // e.g. "NIST-aligned conservative: CRQC by 2033"
+  classicalExposure: RiskDistributionBucket[];
+  quantumExposure: RiskDistributionBucket[];
+  prioritizedFindingIds: string[];
+}
+
+export interface DashboardSummary {
+  cryptoAssets: number;
+  algorithms: number;
+  certificates: number;
+  libraries: number;
+  highRisk: number;
+  quantumRisk: number;
+  riskDistribution: RiskDistributionBucket[];
+  topRiskyComponents: { name: string; occurrences: number; riskLevel: RiskLevel }[];
+  recentScans: Scan[];
+  coverageSummary: { scansCompleted: number; filesScanned: number; unsupportedFiles: number };
+}
+
+export interface NewScanInput {
+  name: string;
+  inputType: AssetInputType;
+  sourceLabel: string;
+  fileName?: string;
+}
