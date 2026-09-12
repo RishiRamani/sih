@@ -3,6 +3,13 @@ from pathlib import Path
 from cryptography import x509
 from cryptography.hazmat.primitives.asymmetric import dsa, ec, ed25519, ed448, rsa
 
+CURVE_NAME_MAP = {
+    "secp256r1": "P-256",
+    "secp384r1": "P-384",
+    "secp521r1": "P-521",
+    "secp256k1": "secp256k1",
+}
+
 class CertificateParser:
     """
     Parses X.509 certificates in PEM or DER format.
@@ -25,7 +32,10 @@ class CertificateParser:
         elif isinstance(public_key, ec.EllipticCurvePublicKey):
             algorithm = "EC"
             key_size = public_key.key_size
-            curve = public_key.curve.name
+            curve = CURVE_NAME_MAP.get(
+                public_key.curve.name,
+                public_key.curve.name,
+            )
 
         elif isinstance(public_key, dsa.DSAPublicKey):
             algorithm = "DSA"

@@ -96,6 +96,7 @@ class BinaryScanner(BaseScanner):
                     metadata={
                         "binary_format": binary_format,
                         "signature": signature.name,
+                        "mode": signature.mode,
                     },
                 )
             )

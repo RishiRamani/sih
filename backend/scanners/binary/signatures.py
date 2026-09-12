@@ -11,6 +11,7 @@ class CryptoSignature:
     algorithm: str | None
     primitive_type: str | None
     confidence: float
+    mode: str | None = None
 
 
 CRYPTO_SIGNATURES = [
@@ -52,6 +53,28 @@ CRYPTO_SIGNATURES = [
         algorithm="AES",
         primitive_type="symmetric",
         confidence=0.95,
+        mode="GCM",
+    ),
+    CryptoSignature(
+        name="AES-CBC",
+        algorithm="AES",
+        primitive_type="symmetric",
+        confidence=0.95,
+        mode="CBC",
+    ),
+    CryptoSignature(
+        name="AES-CTR",
+        algorithm="AES",
+        primitive_type="symmetric",
+        confidence=0.95,
+        mode="CTR",
+    ),
+    CryptoSignature(
+        name="AES-ECB",
+        algorithm="AES",
+        primitive_type="symmetric",
+        confidence=0.95,
+        mode="ECB",
     ),
 
     # RSA

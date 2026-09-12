@@ -122,7 +122,7 @@ def test_parse_ec_certificate(tmp_path):
 
     assert result["algorithm"] == "EC"
     assert result["key_size"] == 256
-    assert result["curve"] == "secp256r1"
+    assert result["curve"] == "P-256"
     assert result["signature_algorithm"] == "sha256"
 
 
