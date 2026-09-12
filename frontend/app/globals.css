@@ -5,68 +5,131 @@
 :root {
   --font-sans: "Inter", "IBM Plex Sans", system-ui, sans-serif;
   --font-mono: "IBM Plex Mono", "JetBrains Mono", ui-monospace, monospace;
+
+  /* Default = dark ("Sepia Night"). Ensures no colorless frame during swap. */
+  --color-base: 21 18 16;           /* #151210 */
+  --color-surface: 33 29 24;        /* #211D18 */
+  --color-elevated: 42 36 29;       /* #2A241D */
+  --color-border: 58 50 40;         /* #3A3228 */
+
+  --color-accent: 214 168 79;       /* #D6A84F antique gold */
+  --color-secondary: 184 107 82;    /* #B86B52 terracotta */
+  --color-teal: 127 163 138;        /* #7FA38A sage — kept name for compat */
+  --color-highlight: 216 199 165;   /* #D8C7A5 parchment */
+
+  --color-text-primary: 241 233 218;   /* #F1E9DA */
+  --color-text-secondary: 158 148 133; /* #9E9485 */
+
+  --color-amber: 214 168 79;        /* #D6A84F gold */
+  --color-crimson: 198 93 82;       /* #C65D52 */
 }
 
-/* Dark mode (default) — midnight steel */
 .dark {
-  --color-base: 11 17 24;          /* #0B1118 */
-  --color-surface: 17 26 36;       /* #111A24 */
-  --color-elevated: 23 35 49;      /* #172331 */
-  --color-border: 38 52 69;        /* #263445 */
-  --color-accent: 77 141 255;      /* #4D8DFF */
-  --color-teal: 79 179 179;        /* #4FB3B3 */
-  --color-text-primary: 230 236 242;
-  --color-text-secondary: 143 163 184;
-  --color-amber: 217 155 55;
-  --color-crimson: 224 90 94;
+  --color-base: 21 18 16;
+  --color-surface: 33 29 24;
+  --color-elevated: 42 36 29;
+  --color-border: 58 50 40;
+
+  --color-accent: 214 168 79;
+  --color-secondary: 184 107 82;
+  --color-teal: 127 163 138;
+  --color-highlight: 216 199 165;
+
+  --color-text-primary: 241 233 218;
+  --color-text-secondary: 158 148 133;
+
+  --color-amber: 214 168 79;
+  --color-crimson: 198 93 82;
 }
 
-/* Light mode */
 .light {
-  --color-base: 244 247 250;       /* #F4F7FA */
-  --color-surface: 255 255 255;    /* #FFFFFF */
-  --color-elevated: 234 240 245;   /* #EAF0F5 */
-  --color-border: 214 224 232;     /* #D6E0E8 */
-  --color-accent: 53 105 200;      /* #3569C8 */
-  --color-teal: 40 127 130;        /* #287F82 */
-  --color-text-primary: 23 37 54;  /* #172536 */
-  --color-text-secondary: 91 114 134;
-  --color-amber: 178 122 15;
-  --color-crimson: 191 53 58;
+  --color-base: 240 235 225;        /* #F0EBE1 */
+  --color-surface: 248 245 238;     /* #F8F5EE */
+  --color-elevated: 255 253 248;    /* #FFFDF8 */
+  --color-border: 216 208 194;      /* #D8D0C2 */
+
+  --color-accent: 154 107 34;       /* #9A6B22 */
+  --color-secondary: 169 83 62;     /* #A9533E */
+  --color-teal: 88 120 96;          /* #587860 */
+  --color-highlight: 91 81 70;      /* #5B5146 ink */
+
+  --color-text-primary: 40 36 31;   /* #28241F */
+  --color-text-secondary: 116 107 96; /* #746B60 */
+
+  --color-amber: 154 107 34;
+  --color-crimson: 169 83 62;
 }
 
-html, body {
-  height: 100%;
+@layer base {
+  html, body { height: 100%; }
+
+  body {
+    background-color: rgb(var(--color-base));
+    color: rgb(var(--color-text-primary));
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  * { border-color: rgb(var(--color-border)); }
+
+  h1 { @apply text-[15px] font-semibold tracking-[-0.01em] text-text-primary; }
+  h2 { @apply text-xl font-semibold tracking-[-0.02em] text-text-primary; }
+  h3 { @apply text-[13px] font-semibold tracking-[-0.005em] text-text-primary; }
+
+  a, button, [role="button"] {
+    transition: background-color 140ms ease, border-color 140ms ease,
+                color 140ms ease, box-shadow 140ms ease, transform 140ms ease;
+  }
+
+  :focus-visible {
+    outline: 2px solid rgb(var(--color-accent));
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
 }
 
-body {
-  background-color: rgb(var(--color-base));
-  color: rgb(var(--color-text-primary));
-  font-family: var(--font-sans);
-  -webkit-font-smoothing: antialiased;
-}
+@layer utilities {
+  .font-mono-tabular { font-variant-numeric: tabular-nums; }
 
-* {
-  border-color: rgb(var(--color-border));
+  /* Signature label style — archival catalogue */
+  .eyebrow {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.11em;
+    color: rgb(var(--color-text-secondary));
+  }
+
+  /* A hairline rule used under section titles */
+  .rule {
+    height: 1px;
+    background: linear-gradient(
+      to right,
+      rgb(var(--color-border)),
+      rgb(var(--color-border) / 0.3)
+    );
+  }
 }
 
 ::selection {
-  background-color: rgb(var(--color-accent) / 0.3);
+  background-color: rgb(var(--color-accent) / 0.35);
+  color: rgb(var(--color-text-primary));
 }
 
-:focus-visible {
-  outline: 2px solid rgb(var(--color-accent));
-  outline-offset: 2px;
-}
-
-/* Scrollbars */
 ::-webkit-scrollbar { width: 10px; height: 10px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb {
   background-color: rgb(var(--color-border));
   border-radius: 8px;
 }
+::-webkit-scrollbar-thumb:hover {
+  background-color: rgb(var(--color-text-secondary) / 0.5);
+}
 
-.font-mono-tabular {
-  font-variant-numeric: tabular-nums;
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
 }

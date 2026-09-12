@@ -1,35 +1,74 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 
 type Theme = "dark" | "light";
 
-const ThemeContext = createContext<{ theme: Theme; toggleTheme: () => void }>({
-  theme: "dark",
-  toggleTheme: () => {}
-});
+interface ThemeContextValue {
+  theme: Theme;
+  toggleTheme: () => void;
+  setTheme: (theme: Theme) => void;
+}
+
+const ThemeContext = createContext<ThemeContextValue | null>(null);
+
+const STORAGE_KEY = "ecdat-theme";
+
+function readStoredTheme(): Theme {
+  if (typeof window === "undefined") return "dark";
+  const stored = window.localStorage.getItem(STORAGE_KEY);
+  return stored === "light" || stored === "dark" ? stored : "dark";
+}
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setTheme] = useState<Theme>("dark");
+  // Start with "dark" on both server and client so hydration matches.
+  // The inline script below sets the real value before paint.
+  const [theme, setThemeState] = useState<Theme>("dark");
+  const [mounted, setMounted] = useState(false);
 
+  // On mount: read what the inline script already applied.
   useEffect(() => {
-    const stored = window.localStorage.getItem("ecdat-theme") as Theme | null;
-    if (stored === "dark" || stored === "light") setTheme(stored);
+    setThemeState(readStoredTheme());
+    setMounted(true);
   }, []);
 
+  // Single effect: apply class + persist. Runs only after mount.
   useEffect(() => {
-    document.documentElement.classList.remove("dark", "light");
-    document.documentElement.classList.add(theme);
-    window.localStorage.setItem("ecdat-theme", theme);
-  }, [theme]);
+    if (!mounted) return;
+    const root = document.documentElement;
+    root.classList.remove("dark", "light");
+    root.classList.add(theme);
+    root.style.colorScheme = theme;
+    window.localStorage.setItem(STORAGE_KEY, theme);
+  }, [theme, mounted]);
 
-  return (
-    <ThemeContext.Provider value={{ theme, toggleTheme: () => setTheme((t) => (t === "dark" ? "light" : "dark")) }}>
-      {children}
-    </ThemeContext.Provider>
+  const setTheme = useCallback((next: Theme) => {
+    setThemeState(next);
+  }, []);
+
+  const toggleTheme = useCallback(() => {
+    setThemeState((t) => (t === "dark" ? "light" : "dark"));
+  }, []);
+
+  const value = useMemo(
+    () => ({ theme, toggleTheme, setTheme }),
+    [theme, toggleTheme, setTheme]
   );
+
+  return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
 }
 
 export function useTheme() {
-  return useContext(ThemeContext);
+  const ctx = useContext(ThemeContext);
+  if (!ctx) {
+    throw new Error("useTheme must be used inside <ThemeProvider>.");
+  }
+  return ctx;
 }

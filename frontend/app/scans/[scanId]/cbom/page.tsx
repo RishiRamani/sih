@@ -4,6 +4,8 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Download } from "lucide-react";
 import { AppShell } from "@/components/layout/AppShell";
+import { Card } from "@/components/ui/Card";
+import { Button } from "@/components/ui/Button";
 import { ScanTabs } from "@/components/layout/ScanTabs";
 import { DataTable, type Column } from "@/components/ui/DataTable";
 import { RiskBadge, ConfidenceBadge, UnknownValue } from "@/components/ui/Badge";
@@ -42,31 +44,75 @@ export default function CbomPage({ params }: { params: { scanId: string } }) {
   }, [data, page]);
 
   const columns: Column<Finding>[] = [
-    { key: "algorithm", header: "Algorithm", render: (f) => <span className="font-medium text-text-primary">{f.algorithm}</span> },
+    {
+      key: "algorithm",
+      header: "Algorithm",
+      render: (f) => <span className="font-medium text-text-primary">{f.algorithm}</span>
+    },
     { key: "variant", header: "Variant", render: (f) => f.variant ?? "—" },
-    { key: "primitiveType", header: "Primitive type", render: (f) => f.primitiveType.replace(/_/g, " ") },
-    { key: "keySize", header: "Key size", render: (f) => (f.keySize && f.keySize !== "Unknown" ? `${f.keySize} bit` : <UnknownValue />) },
+    {
+      key: "primitiveType",
+      header: "Primitive type",
+      render: (f) => f.primitiveType.replace(/_/g, " ")
+    },
+    {
+      key: "keySize",
+      header: "Key size",
+      render: (f) =>
+        f.keySize && f.keySize !== "Unknown" ? (
+          <span className="font-mono-tabular">{f.keySize} bit</span>
+        ) : (
+          <UnknownValue />
+        )
+    },
     { key: "mode", header: "Mode", render: (f) => f.mode ?? "—" },
     {
       key: "library",
       header: "Library / version",
       render: (f) => (
         <span>
-          {f.library ?? "—"} {f.libraryVersion ? <span className="text-text-secondary">{f.libraryVersion}</span> : null}
+          {f.library ?? "—"}{" "}
+          {f.libraryVersion ? (
+            <span className="font-mono text-xs text-text-secondary">{f.libraryVersion}</span>
+          ) : null}
         </span>
       )
     },
-    { key: "component", header: "Application / component", render: (f) => data?.components.find((c) => c.library === f.library)?.application ?? "—" },
-    { key: "assetType", header: "Asset type", render: (f) => INPUT_TYPE_LABEL[f.assetType] ?? f.assetType },
-    { key: "detectionMethods", header: "Detection method", render: (f) => f.detectionMethods[0]?.replace(/_/g, " ") ?? "—" },
-    { key: "confidence", header: "Confidence", render: (f) => <ConfidenceBadge level={f.confidence} /> },
-    { key: "riskLevel", header: "Risk", render: (f) => <RiskBadge level={f.riskLevel} /> },
+    {
+      key: "component",
+      header: "Application / component",
+      render: (f) =>
+        data?.components.find((c) => c.library === f.library)?.application ?? "—"
+    },
+    {
+      key: "assetType",
+      header: "Asset type",
+      render: (f) => INPUT_TYPE_LABEL[f.assetType] ?? f.assetType
+    },
+    {
+      key: "detectionMethods",
+      header: "Detection method",
+      render: (f) => f.detectionMethods[0]?.replace(/_/g, " ") ?? "—"
+    },
+    {
+      key: "confidence",
+      header: "Confidence",
+      render: (f) => <ConfidenceBadge level={f.confidence} />
+    },
+    {
+      key: "riskLevel",
+      header: "Risk",
+      render: (f) => <RiskBadge level={f.riskLevel} />
+    },
     {
       key: "sourcePath",
       header: "Source location",
       className: "max-w-[200px]",
       render: (f) => (
-        <span className="block truncate font-mono text-xs text-text-secondary" title={f.sourcePath}>
+        <span
+          className="block truncate font-mono text-xs text-text-secondary"
+          title={f.sourcePath}
+        >
           {f.sourcePath ?? "—"}
         </span>
       )
@@ -82,32 +128,38 @@ export default function CbomPage({ params }: { params: { scanId: string } }) {
 
       {data ? (
         <>
-          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
             <div>
-              <h2 className="text-lg font-semibold text-text-primary">Cryptography Bill of Materials</h2>
-              <p className="text-sm text-text-secondary">
-                {data.components.length} components · {data.findings.length} normalized artefacts · generated {formatDate(data.generatedAt)}
+              <p className="eyebrow">Inventory</p>
+              <h2 className="mt-1 text-xl font-semibold tracking-[-0.02em] text-text-primary">
+                Cryptography Bill of Materials
+              </h2>
+              <p className="mt-1 text-[13px] text-text-secondary">
+                {data.components.length} components · {data.findings.length} normalized artefacts ·
+                generated {formatDate(data.generatedAt)}
               </p>
             </div>
-            <button
+            <Button
+              variant="secondary"
               onClick={() => router.push(`/scans/${scanId}/recommendations`)}
-              className="flex items-center gap-2 rounded border border-border bg-elevated px-3 py-2 text-sm font-medium text-text-primary hover:border-accent/50"
             >
               <Download size={14} />
               Export report
-            </button>
+            </Button>
           </div>
 
-          <DataTable
-            columns={columns}
-            rows={pageItems}
-            keyExtractor={(f) => f.id}
-            onRowClick={(f) => router.push(`/scans/${scanId}/findings/${f.id}`)}
-            page={page}
-            pageSize={PAGE_SIZE}
-            total={data.findings.length}
-            onPageChange={setPage}
-          />
+          <Card bodyClassName="p-0">
+            <DataTable
+              columns={columns}
+              rows={pageItems}
+              keyExtractor={(f) => f.id}
+              onRowClick={(f) => router.push(`/scans/${scanId}/findings/${f.id}`)}
+              page={page}
+              pageSize={PAGE_SIZE}
+              total={data.findings.length}
+              onPageChange={setPage}
+            />
+          </Card>
         </>
       ) : null}
     </AppShell>

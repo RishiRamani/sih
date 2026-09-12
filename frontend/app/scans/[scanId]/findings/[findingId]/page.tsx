@@ -2,9 +2,21 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, FileCode2, ShieldQuestion } from "lucide-react";
+import {
+  ArrowLeft,
+  FileCode2,
+  ShieldQuestion,
+  Sparkles
+} from "lucide-react";
 import { AppShell } from "@/components/layout/AppShell";
-import { RiskBadge, ConfidenceBadge, ExposureBadge, UnknownValue, AssumptionTag } from "@/components/ui/Badge";
+import { Card } from "@/components/ui/Card";
+import {
+  RiskBadge,
+  ConfidenceBadge,
+  ExposureBadge,
+  UnknownValue,
+  AssumptionTag
+} from "@/components/ui/Badge";
 import { ErrorState, LoadingState } from "@/components/ui/States";
 import { api } from "@/lib/api";
 import type { Finding } from "@/lib/types";
@@ -24,13 +36,19 @@ const DETECTION_METHOD_LABEL: Record<string, string> = {
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div>
-      <dt className="text-xs font-medium text-text-secondary">{label}</dt>
-      <dd className="mt-0.5 text-sm text-text-primary">{children}</dd>
+      <dt className="text-[10px] font-semibold uppercase tracking-[0.11em] text-text-secondary">
+        {label}
+      </dt>
+      <dd className="mt-1 text-sm text-text-primary">{children}</dd>
     </div>
   );
 }
 
-export default function FindingDetailPage({ params }: { params: { scanId: string; findingId: string } }) {
+export default function FindingDetailPage({
+  params
+}: {
+  params: { scanId: string; findingId: string };
+}) {
   const { scanId, findingId } = params;
   const [finding, setFinding] = useState<Finding | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -50,8 +68,11 @@ export default function FindingDetailPage({ params }: { params: { scanId: string
 
   return (
     <AppShell title="Finding detail">
-      <Link href={`/scans/${scanId}/findings`} className="mb-4 inline-flex items-center gap-1.5 text-sm text-text-secondary hover:text-text-primary">
-        <ArrowLeft size={14} />
+      <Link
+        href={`/scans/${scanId}/findings`}
+        className="mb-5 inline-flex items-center gap-1.5 text-[12px] font-medium uppercase tracking-[0.08em] text-text-secondary transition-colors hover:text-text-primary"
+      >
+        <ArrowLeft size={13} />
         Back to findings
       </Link>
 
@@ -60,44 +81,69 @@ export default function FindingDetailPage({ params }: { params: { scanId: string
 
       {finding ? (
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+          {/* Left column */}
           <div className="space-y-4 lg:col-span-2">
-            <div className="rounded-md border border-border bg-surface p-5 shadow-subtle">
+            {/* Identification */}
+            <Card bodyClassName="px-5 py-5">
               <div className="mb-1 flex flex-wrap items-center gap-2">
-                <h2 className="text-lg font-semibold text-text-primary">
+                <h2 className="text-xl font-semibold tracking-[-0.02em] text-text-primary">
                   {finding.algorithm}
-                  {finding.variant ? <span className="font-normal text-text-secondary"> · {finding.variant}</span> : null}
+                  {finding.variant ? (
+                    <span className="font-normal text-text-secondary"> · {finding.variant}</span>
+                  ) : null}
                 </h2>
                 <RiskBadge level={finding.riskLevel} />
                 <ConfidenceBadge level={finding.confidence} />
               </div>
-              <p className="mb-4 text-xs font-mono-tabular text-text-secondary">
-                Finding {finding.id} · Scan {finding.scanId}
+              <p className="mb-5 font-mono text-[11px] uppercase tracking-[0.06em] text-text-secondary">
+                {finding.id} · scan {finding.scanId}
               </p>
 
-              <dl className="grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-3">
-                <Field label="Primitive type">{finding.primitiveType.replace(/_/g, " ")}</Field>
-                <Field label="Key size">{finding.keySize && finding.keySize !== "Unknown" ? `${finding.keySize} bit` : <UnknownValue />}</Field>
+              <dl className="grid grid-cols-2 gap-x-5 gap-y-4 sm:grid-cols-3">
+                <Field label="Primitive type">
+                  {finding.primitiveType.replace(/_/g, " ")}
+                </Field>
+                <Field label="Key size">
+                  {finding.keySize && finding.keySize !== "Unknown" ? (
+                    <span className="font-mono-tabular">{finding.keySize} bit</span>
+                  ) : (
+                    <UnknownValue />
+                  )}
+                </Field>
                 <Field label="Mode">{finding.mode ?? "—"}</Field>
                 <Field label="Parameter set">{finding.parameterSet ?? "—"}</Field>
                 <Field label="Library">
                   {finding.library ?? "—"}
-                  {finding.libraryVersion ? ` ${finding.libraryVersion}` : ""}
+                  {finding.libraryVersion ? (
+                    <span className="ml-1 font-mono text-xs text-text-secondary">
+                      {finding.libraryVersion}
+                    </span>
+                  ) : null}
                 </Field>
-                <Field label="Asset / input type">{INPUT_TYPE_LABEL[finding.assetType] ?? finding.assetType}</Field>
+                <Field label="Asset type">
+                  {INPUT_TYPE_LABEL[finding.assetType] ?? finding.assetType}
+                </Field>
               </dl>
-            </div>
+            </Card>
 
-            <div className="rounded-md border border-border bg-surface p-5 shadow-subtle">
-              <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold text-text-primary">
-                <FileCode2 size={15} />
-                Where &amp; how it was detected
-              </h3>
-              <dl className="space-y-3">
+            {/* Detection */}
+            <Card
+              title="Where & how it was detected"
+              actions={<FileCode2 size={14} className="text-text-secondary" />}
+              bodyClassName="px-5 py-5"
+            >
+              <dl className="space-y-4">
                 <Field label="Source location">
                   {finding.sourcePath ? (
                     <span className="font-mono text-xs">
                       {finding.sourcePath}
-                      {finding.lineStart ? `:${finding.lineStart}${finding.lineEnd && finding.lineEnd !== finding.lineStart ? `-${finding.lineEnd}` : ""}` : ""}
+                      {finding.lineStart
+                        ? `:${finding.lineStart}${
+                            finding.lineEnd && finding.lineEnd !== finding.lineStart
+                              ? `-${finding.lineEnd}`
+                              : ""
+                          }`
+                        : ""}
                     </span>
                   ) : (
                     "—"
@@ -106,7 +152,10 @@ export default function FindingDetailPage({ params }: { params: { scanId: string
                 <Field label="Detection methods">
                   <div className="flex flex-wrap gap-1.5">
                     {finding.detectionMethods.map((m) => (
-                      <span key={m} className="rounded border border-border bg-elevated px-2 py-0.5 text-xs text-text-secondary">
+                      <span
+                        key={m}
+                        className="rounded-sm border border-border bg-elevated px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.06em] text-text-secondary"
+                      >
                         {DETECTION_METHOD_LABEL[m] ?? m}
                       </span>
                     ))}
@@ -114,81 +163,116 @@ export default function FindingDetailPage({ params }: { params: { scanId: string
                 </Field>
                 {finding.evidence ? (
                   <Field label="Evidence">
-                    <pre className="mt-1 overflow-x-auto rounded border border-border bg-elevated px-3 py-2 font-mono text-xs text-text-primary">
+                    <pre className="mt-1 overflow-x-auto rounded-sm border border-border bg-elevated px-3 py-2 font-mono text-xs leading-relaxed text-text-primary">
                       {finding.evidence}
                     </pre>
                   </Field>
                 ) : null}
               </dl>
-            </div>
+            </Card>
 
-            <div className="rounded-md border border-border bg-surface p-5 shadow-subtle">
-              <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold text-text-primary">
-                <ShieldQuestion size={15} />
-                Why this is risky
-              </h3>
+            {/* Risk reasoning */}
+            <Card
+              title="Why this is risky"
+              actions={<ShieldQuestion size={14} className="text-text-secondary" />}
+              bodyClassName="px-5 py-5"
+            >
               <div className="mb-4 flex flex-wrap gap-2">
                 <ExposureBadge status={finding.classicalStatus} label="Classical" />
                 <ExposureBadge status={finding.quantumStatus} label="Quantum" />
               </div>
-              <p className="text-sm text-text-secondary">{finding.riskExplanation ?? "No explanation returned by the backend for this finding."}</p>
+              <p className="text-sm leading-relaxed text-text-secondary">
+                {finding.riskExplanation ??
+                  "No explanation returned by the backend for this finding."}
+              </p>
 
-              <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-3">
+              <dl className="mt-5 grid grid-cols-2 gap-x-5 gap-y-4 sm:grid-cols-3">
                 <Field label="Risk score">
                   <span className="font-mono-tabular">{finding.riskScore} / 100</span>
                 </Field>
                 <Field label="Data lifetime">
                   <span className="flex items-center gap-1.5">
-                    {finding.dataLifetime && finding.dataLifetime !== "Unknown" ? finding.dataLifetime : <UnknownValue />}
+                    {finding.dataLifetime && finding.dataLifetime !== "Unknown" ? (
+                      finding.dataLifetime
+                    ) : (
+                      <UnknownValue />
+                    )}
                     {finding.isAssumption?.dataLifetime ? <AssumptionTag /> : null}
                   </span>
                 </Field>
                 <Field label="Business criticality">
                   <span className="flex items-center gap-1.5">
-                    {finding.businessCriticality && finding.businessCriticality !== "Unknown" ? finding.businessCriticality : <UnknownValue />}
+                    {finding.businessCriticality &&
+                    finding.businessCriticality !== "Unknown" ? (
+                      finding.businessCriticality
+                    ) : (
+                      <UnknownValue />
+                    )}
                     {finding.isAssumption?.businessCriticality ? <AssumptionTag /> : null}
                   </span>
                 </Field>
-                <Field label="Migration effort">{finding.migrationTime && finding.migrationTime !== "UNKNOWN" ? finding.migrationTime : <UnknownValue />}</Field>
+                <Field label="Migration effort">
+                  {finding.migrationTime && finding.migrationTime !== "UNKNOWN" ? (
+                    finding.migrationTime
+                  ) : (
+                    <UnknownValue />
+                  )}
+                </Field>
               </dl>
-            </div>
+            </Card>
           </div>
 
+          {/* Right column */}
           <div className="space-y-4">
             {finding.recommendation ? (
-              <div className="rounded-md border border-accent/30 bg-accent/5 p-5">
-                <h3 className="mb-3 text-sm font-semibold text-text-primary">Recommended migration</h3>
-                <dl className="space-y-3">
-                  <Field label="Direction">{finding.recommendation.direction.replace(/_/g, " ")}</Field>
-                  <Field label="Candidate algorithm">{finding.recommendation.candidateAlgorithm}</Field>
+              <Card
+                title="Recommended migration"
+                actions={<Sparkles size={14} className="text-accent" />}
+                bodyClassName="px-5 py-5"
+              >
+                <dl className="space-y-4">
+                  <Field label="Direction">
+                    {finding.recommendation.direction.replace(/_/g, " ")}
+                  </Field>
+                  <Field label="Candidate algorithm">
+                    <span className="font-mono text-xs">
+                      {finding.recommendation.candidateAlgorithm}
+                    </span>
+                  </Field>
                   <Field label="Priority">
                     <RiskBadge level={finding.recommendation.priority} />
                   </Field>
                   <Field label="Rationale">
-                    <span className="text-sm text-text-secondary">{finding.recommendation.rationale}</span>
+                    <span className="text-sm leading-relaxed text-text-secondary">
+                      {finding.recommendation.rationale}
+                    </span>
                   </Field>
                   {finding.recommendation.tradeOffs ? (
                     <Field label="Trade-offs">
-                      <span className="text-sm text-text-secondary">{finding.recommendation.tradeOffs}</span>
+                      <span className="text-sm leading-relaxed text-text-secondary">
+                        {finding.recommendation.tradeOffs}
+                      </span>
                     </Field>
                   ) : null}
-                  {finding.recommendation.isExperimental ? (
-                    <p className="rounded border border-amber/30 bg-amber/10 px-2 py-1.5 text-xs text-amber">
-                      Candidate algorithm is experimental — not yet a finalized standard.
-                    </p>
-                  ) : null}
                 </dl>
+                {finding.recommendation.isExperimental ? (
+                  <p className="mt-4 rounded border border-amber/35 bg-amber/10 px-2.5 py-2 text-xs leading-relaxed text-amber">
+                    Candidate algorithm is experimental — not yet a finalized standard.
+                  </p>
+                ) : null}
                 <Link
                   href={`/scans/${scanId}/recommendations`}
-                  className="mt-4 inline-block text-xs font-medium text-accent hover:underline"
+                  className="mt-4 inline-block text-[11px] font-medium uppercase tracking-[0.08em] text-accent hover:text-accent/80"
                 >
                   View all recommendations →
                 </Link>
-              </div>
+              </Card>
             ) : (
-              <div className="rounded-md border border-border bg-surface p-5 text-sm text-text-secondary">
-                No migration recommendation was returned for this finding.
-              </div>
+              <Card bodyClassName="px-5 py-5">
+                <p className="text-sm text-text-secondary">
+                  No migration recommendation was returned for this finding.
+                </p>
+              </Card>
             )}
           </div>
         </div>

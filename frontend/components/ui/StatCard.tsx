@@ -10,23 +10,27 @@ interface StatCardProps {
 }
 
 const toneClasses = {
-  default: "text-accent bg-accent/10",
-  amber: "text-amber bg-amber/10",
-  crimson: "text-crimson bg-crimson/10",
-  teal: "text-teal bg-teal/10"
+  default: "text-accent",
+  amber: "text-accent",
+  crimson: "text-crimson",
+  teal: "text-teal"
 };
 
 export function StatCard({ label, value, icon: Icon, tone = "default", hint }: StatCardProps) {
   return (
-    <div className="rounded-md border border-border bg-surface p-4 shadow-subtle">
-      <div className="flex items-start justify-between">
-        <span className="text-xs font-medium text-text-secondary">{label}</span>
-        <span className={cn("flex h-7 w-7 items-center justify-center rounded", toneClasses[tone])}>
-          <Icon size={15} strokeWidth={2} />
+    <div className="relative rounded border border-border bg-surface px-4 py-3.5">
+      <div className="flex items-center justify-between">
+        <span className="text-[10px] font-semibold uppercase tracking-[0.11em] text-text-secondary">
+          {label}
         </span>
+        <Icon size={14} strokeWidth={2} className={cn(toneClasses[tone])} />
       </div>
-      <div className="mt-2 font-mono-tabular text-2xl font-semibold text-text-primary">{value}</div>
-      {hint ? <div className="mt-1 text-xs text-text-secondary">{hint}</div> : null}
+      <div className="mt-2 font-mono text-[26px] font-medium leading-none tracking-[-0.02em] text-text-primary">
+        {value}
+      </div>
+      {hint ? (
+        <div className="mt-1.5 text-[11px] text-text-secondary">{hint}</div>
+      ) : null}
     </div>
   );
 }
