@@ -38,8 +38,19 @@ def _certificate_properties(
         ),
     )
 
+def _application_identity(
+    finding: Finding,
+    application_name_override: str | None = None,
+) -> str:
+    if application_name_override:
+        return f"application|{application_name_override}"
+
+    return application_fingerprint(finding)
+
+
 def build_dependencies(
     findings: list[Finding],
+    application_name_override: str | None = None,
 ) -> list[CBOMDependency]:
     """
     Build CycloneDX dependency relationships.
@@ -54,7 +65,10 @@ def build_dependencies(
         if not finding.library:
             continue
 
-        application_id = application_fingerprint(finding)
+        application_id = _application_identity(
+            finding,
+            application_name_override,
+        )
 
         library_id = library_fingerprint(
             finding.library,
@@ -88,7 +102,11 @@ def build_dependencies(
 
     return list(dependencies_by_ref.values())
 
-def generate_cbom(findings: list[Finding]) -> CBOM:
+
+def generate_cbom(
+    findings: list[Finding],
+    application_name_override: str | None = None,
+) -> CBOM:
     """
     Convert normalized ECDAT findings into a CycloneDX 1.7 CBOM.
     """
@@ -100,7 +118,10 @@ def generate_cbom(findings: list[Finding]) -> CBOM:
     for finding in findings:
         component_id = component_fingerprint(finding)
         finding_id = finding_fingerprint(finding)
-        application_id = application_fingerprint(finding)
+        application_id = _application_identity(
+            finding,
+            application_name_override,
+        )
 
         # --------------------------------------------------
         # Application component
@@ -254,7 +275,10 @@ def generate_cbom(findings: list[Finding]) -> CBOM:
                 )
             )
 
-    dependencies = build_dependencies(findings)
+    dependencies = build_dependencies(
+        findings,
+        application_name_override=application_name_override,
+    )
 
     return CBOM(
         serialNumber=f"urn:uuid:{uuid4()}",

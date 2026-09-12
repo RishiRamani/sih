@@ -40,3 +40,8 @@ print("Test 6c — KEM != SIGNATURE:",
 
 print("Test 7 — nonsensical primitive:",
       "PASS" if get_recommendation("RSA", "HASH") is None else "FAIL")
+
+def test_lookup_algorithm_is_case_insensitive_for_canonical_names():
+    assert lookup_algorithm("EdDSA") is not None
+    assert lookup_algorithm("eddsa") is not None
+    assert lookup_algorithm("EDDSA") is not None

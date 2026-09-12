@@ -12,7 +12,7 @@ Reads from the versioned knowledge base. No hardcoded algorithm rules.
 """
 
 from typing import Any
-from intelligence.crypto_kb import lookup_algorithm
+from .crypto_kb import lookup_algorithm
 
 _STATUS_SCORES: dict[str, int] = {
     "BROKEN": 100,

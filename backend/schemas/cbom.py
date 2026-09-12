@@ -112,10 +112,10 @@ class CBOMComponent(BaseModel):
     name: str
     version: str | None = None
 
-    crypto_properties: CryptoProperties = Field(
-        default=None,
-        alias="cryptoProperties",
-    )
+    crypto_properties: CryptoProperties | None = Field(
+    default=None,
+    alias="cryptoProperties",
+)
 
     properties: list[CBOMProperty] = Field(
         default_factory=list,
