@@ -49,10 +49,10 @@ class BinaryScanner(BaseScanner):
         return self._scan_file(target)
 
     def _scan_file(self, target: Path) -> list[Finding]:
-        if self.format_detector.detect(target) == "unknown":
-            return []
-
         binary_format = self.format_detector.detect(target)
+
+        if binary_format == "unknown":
+            return []
 
         strings = self.string_extractor.extract(target)
 
@@ -104,7 +104,7 @@ class BinaryScanner(BaseScanner):
                     algorithm=signature.algorithm,
                     primitive_type=signature.primitive_type,
                     variant=None,
-                    key_size=None,
+                    key_size=signature.key_size,
                     library=(
                         "OpenSSL"
                         if signature.name in {"OpenSSL", "libcrypto"}

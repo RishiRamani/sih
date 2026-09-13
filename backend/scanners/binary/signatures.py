@@ -12,6 +12,7 @@ class CryptoSignature:
     primitive_type: str | None
     confidence: float
     mode: str | None = None
+    key_size: int | None = None
 
 
 CRYPTO_SIGNATURES = [
@@ -41,12 +42,14 @@ CRYPTO_SIGNATURES = [
         algorithm="AES",
         primitive_type="symmetric",
         confidence=0.95,
+        key_size=128,
     ),
     CryptoSignature(
         name="EVP_aes_256",
         algorithm="AES",
         primitive_type="symmetric",
         confidence=0.95,
+        key_size=256,
     ),
     CryptoSignature(
         name="AES-GCM",
@@ -83,6 +86,34 @@ CRYPTO_SIGNATURES = [
         algorithm="RSA",
         primitive_type="asymmetric",
         confidence=0.90,
+    ),
+    CryptoSignature(
+        name="RSA-1024",
+        algorithm="RSA",
+        primitive_type="asymmetric",
+        confidence=0.95,
+        key_size=1024,
+    ),
+    CryptoSignature(
+        name="RSA-2048",
+        algorithm="RSA",
+        primitive_type="asymmetric",
+        confidence=0.95,
+        key_size=2048,
+    ),
+    CryptoSignature(
+        name="RSA-3072",
+        algorithm="RSA",
+        primitive_type="asymmetric",
+        confidence=0.95,
+        key_size=3072,
+    ),
+    CryptoSignature(
+        name="RSA-4096",
+        algorithm="RSA",
+        primitive_type="asymmetric",
+        confidence=0.95,
+        key_size=4096,
     ),
     CryptoSignature(
         name="RSA_public_encrypt",
@@ -160,8 +191,22 @@ class CryptoSignatureDetector:
         matches = []
 
         for signature in CRYPTO_SIGNATURES:
+            signature_name = signature.name.lower()
             for value in evidence:
-                if signature.name.lower() in value.lower():
+                value_lower = value.lower()
+
+                # Exact match: AES should match "AES",
+                # but not "AES-GCM" or "AES-CBC".
+                if value_lower == signature_name:
+                    matches.append(signature)
+                    break
+
+                # Allow specific signatures to match longer
+                # function/symbol names, e.g. RSA_public_encrypt.
+                if (
+                    value_lower.startswith(signature_name + "_")
+                    or value_lower.startswith(signature_name + "-")
+                ):
                     matches.append(signature)
                     break
 
