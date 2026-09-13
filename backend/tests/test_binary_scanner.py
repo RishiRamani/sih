@@ -190,3 +190,24 @@ def test_demo_binary_scanner(tmp_path):
     assert "SHA-256" in algorithms
     assert "SHA-1" in algorithms
     assert "MD5" in algorithms
+
+
+def test_binary_scanner_scans_binaries_inside_directory(tmp_path):
+    source = Path("backend/data/demo/binaries/demo_crypto.cpp")
+    binary_dir = tmp_path / "binaries"
+    binary_dir.mkdir()
+    output = binary_dir / "demo_crypto.exe"
+
+    if shutil.which("g++") is None:
+        return
+
+    subprocess.run(
+        ["g++", str(source), "-o", str(output)],
+        check=True,
+    )
+
+    findings = BinaryScanner().scan(binary_dir)
+
+    assert findings
+    assert all(finding.artifact_type == "binary" for finding in findings)
+    assert any(finding.algorithm == "AES" for finding in findings)

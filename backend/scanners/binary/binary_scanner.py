@@ -27,13 +27,29 @@ class BinaryScanner(BaseScanner):
         return "Binary Crypto Scanner"
 
     def can_scan(self, target: Path) -> bool:
-        if not target.is_file():
-            return False
+        if target.is_dir():
+            return any(
+                path.is_file() and self.format_detector.detect(path) != "unknown"
+                for path in target.rglob("*")
+            )
 
         return self.format_detector.detect(target) != "unknown"
 
     def scan(self, target: Path) -> list[Finding]:
         if not self.can_scan(target):
+            return []
+
+        if target.is_dir():
+            findings = []
+            for path in target.rglob("*"):
+                if path.is_file():
+                    findings.extend(self._scan_file(path))
+            return findings
+
+        return self._scan_file(target)
+
+    def _scan_file(self, target: Path) -> list[Finding]:
+        if self.format_detector.detect(target) == "unknown":
             return []
 
         binary_format = self.format_detector.detect(target)

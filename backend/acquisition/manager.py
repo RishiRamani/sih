@@ -51,9 +51,9 @@ def acquire_target(
                 f"Target path does not exist: {source}"
             )
 
-        if not target.is_dir():
+        if not target.is_dir() and not target.is_file():
             raise AcquisitionError(
-                f"Target must be a directory: {source}"
+                f"Target must be a file or directory: {source}"
             )
 
         return AcquiredTarget(target)

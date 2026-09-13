@@ -86,11 +86,12 @@ export function toFinding(
   const riskScore = extractRiskScore(intel);
   const classicalStatus = extractClassicalStatus(intel);
   const quantumStatus = extractQuantumStatus(intel);
+  const assetType = assetTypeForArtifact(raw.artifact_type);
 
   return {
     id: `${scanId}:${raw.asset_path}:${raw.line_start ?? 0}:${raw.algorithm ?? "unknown"}`,
     scanId,
-    assetType: "SOURCE_REPOSITORY",
+    assetType,
     algorithm: raw.algorithm ?? "Unknown",
     variant: raw.variant ?? undefined,
     primitiveType: normalizePrimitive(raw.primitive_type),
@@ -103,7 +104,7 @@ export function toFinding(
     sourcePath: raw.asset_path,
     lineStart: raw.line_start ?? undefined,
     lineEnd: raw.line_end ?? undefined,
-    inputType: "SOURCE_REPOSITORY",
+    inputType: assetType,
     detectionMethods: [normalizeDetection(raw.detection_method)],
     evidence: raw.evidence ?? undefined,
     confidence: normalizeConfidence(raw.confidence),
@@ -119,6 +120,21 @@ export function toFinding(
       ? toRecommendation(intel, scanId, raw.algorithm ?? "Unknown")
       : undefined,
   };
+}
+
+function assetTypeForArtifact(artifactType: string): AssetInputType {
+  switch (artifactType.toLowerCase()) {
+    case "binary":
+      return "BINARY_LIBRARY";
+    case "certificate":
+      return "CERTIFICATE";
+    case "container":
+      return "CONTAINER_IMAGE";
+    case "dependency":
+      return "DEPENDENCY_MANIFEST";
+    default:
+      return "SOURCE_REPOSITORY";
+  }
 }
 
 function normalizePrimitive(p: string | null): PrimitiveType {
