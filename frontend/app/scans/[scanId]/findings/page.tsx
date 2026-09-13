@@ -5,11 +5,12 @@ import { useRouter } from "next/navigation";
 import { Search } from "lucide-react";
 import { AppShell } from "@/components/layout/AppShell";
 import { ScanTabs } from "@/components/layout/ScanTabs";
+import { Card } from "@/components/ui/Card";
 import { DataTable, type Column } from "@/components/ui/DataTable";
 import { RiskBadge, ConfidenceBadge, UnknownValue } from "@/components/ui/Badge";
 import { ErrorState, LoadingState } from "@/components/ui/States";
 import { api } from "@/lib/api";
-import type { Finding } from "@/lib/types";
+import type { Finding, Scan } from "@/lib/types";
 import { INPUT_TYPE_LABEL } from "@/lib/utils";
 
 const PAGE_SIZE = 15;
@@ -28,6 +29,11 @@ export default function FindingsPage({ params }: { params: { scanId: string } })
   const [confidence, setConfidence] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [scan, setScan] = useState<Scan | null>(null);
+
+  useEffect(() => {
+    api.getScan(scanId).then(setScan).catch(() => setScan(null));
+  }, [scanId]);
 
   const load = useCallback(() => {
     setLoading(true);
@@ -156,19 +162,40 @@ export default function FindingsPage({ params }: { params: { scanId: string } })
       {error ? <ErrorState description={error} onRetry={load} /> : null}
 
       {!error ? (
-        <DataTable
-          columns={columns}
-          rows={items}
-          keyExtractor={(f) => f.id}
-          onRowClick={(f) => router.push(`/scans/${scanId}/findings/${f.id}`)}
-          sortBy={sortBy}
-          sortDir={sortDir}
-          onSortChange={handleSortChange}
-          page={page}
-          pageSize={PAGE_SIZE}
-          total={total}
-          onPageChange={setPage}
-        />
+        <>
+          {scan?.coverage ? (
+            <Card className="mb-4" title="Scan coverage">
+              <div className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
+                <div><div className="text-xs text-text-secondary">Files scanned</div><div className="font-mono-tabular text-lg text-text-primary">{scan.coverage.filesScanned} / {scan.coverage.filesTotal}</div></div>
+                <div><div className="text-xs text-text-secondary">Unsupported</div><div className="font-mono-tabular text-lg text-amber">{scan.coverage.unsupportedFiles}</div></div>
+                <div><div className="text-xs text-text-secondary">Parse errors</div><div className="font-mono-tabular text-lg text-danger">{scan.coverage.parseErrors}</div></div>
+                <div><div className="text-xs text-text-secondary">Warnings</div><div className="font-mono-tabular text-lg text-text-primary">{scan.coverage.warnings.length}</div></div>
+              </div>
+              {scan.coverage.warnings.length > 0 ? (
+                <ul className="mt-3 space-y-1 border-t border-border pt-3 text-xs text-text-secondary">
+                  {scan.coverage.warnings.map((warning, index) => (
+                    <li key={`${warning.code}-${index}`}><span className="font-mono text-amber">{warning.code}</span>: {warning.message}{warning.path ? ` (${warning.path})` : ""}</li>
+                  ))}
+                </ul>
+              ) : null}
+            </Card>
+          ) : null}
+          <Card bodyClassName="p-0">
+            <DataTable
+              columns={columns}
+              rows={items}
+              keyExtractor={(f) => f.id}
+              onRowClick={(f) => router.push(`/scans/${scanId}/findings/${encodeURIComponent(f.id)}`)}
+              sortBy={sortBy}
+              sortDir={sortDir}
+              onSortChange={handleSortChange}
+              page={page}
+              pageSize={PAGE_SIZE}
+              total={total}
+              onPageChange={setPage}
+            />
+          </Card>
+        </>
       ) : null}
     </AppShell>
   );

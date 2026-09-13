@@ -27,9 +27,15 @@ export default function RiskPage({ params }: { params: { scanId: string } }) {
       .then(async (s) => {
         setSummary(s);
         const findings = await Promise.all(
-          s.prioritizedFindingIds.map((id) => api.getFinding(scanId, id))
+          s.prioritizedFindingIds.map(async (id) => {
+            try {
+              return await api.getFinding(scanId, id);
+            } catch {
+              return null;
+            }
+          })
         );
-        setPrioritized(findings);
+        setPrioritized(findings.filter((finding): finding is Finding => finding !== null));
       })
       .catch((e) =>
         setError(e instanceof Error ? e.message : "Failed to load risk assessment.")
@@ -83,7 +89,7 @@ export default function RiskPage({ params }: { params: { scanId: string } }) {
                 {prioritized.map((f) => (
                   <li key={f.id}>
                     <Link
-                      href={`/scans/${scanId}/findings/${f.id}`}
+                      href={`/scans/${scanId}/findings/${encodeURIComponent(f.id)}`}
                       className="flex items-center justify-between gap-3 rounded py-2.5 pl-2 pr-1 text-sm transition-colors hover:bg-elevated/60"
                     >
                       <div className="min-w-0">

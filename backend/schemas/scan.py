@@ -30,6 +30,10 @@ class ScanRequest(BaseModel):
     source_type: Literal["local", "git"] = "local"
     source: str | None = None
     target_path: str | None = None
+    business_criticality: Literal["LOW", "MEDIUM", "HIGH", "CRITICAL"] = "MEDIUM"
+    data_lifetime_years: float = Field(default=3.0, ge=0)
+    migration_time_years: float = Field(default=2.0, ge=0)
+    crqc_arrival_years: float | None = Field(default=None, ge=0)
 
     @model_validator(mode="after")
     def validate_source(self) -> "ScanRequest":
@@ -70,3 +74,23 @@ class ScanResult(BaseModel):
     completed_at: datetime | None = None
     
     error: str | None = None
+
+    business_criticality: str = "MEDIUM"
+    data_lifetime_years: float = 3.0
+    migration_time_years: float = 2.0
+    crqc_arrival_years: float | None = None
+    coverage: "ScanCoverage" = Field(default_factory=lambda: ScanCoverage())
+
+
+class CoverageWarning(BaseModel):
+    code: str
+    message: str
+    path: str | None = None
+
+
+class ScanCoverage(BaseModel):
+    files_scanned: int = 0
+    files_total: int = 0
+    unsupported_files: int = 0
+    parse_errors: int = 0
+    warnings: list[CoverageWarning] = Field(default_factory=list)

@@ -57,7 +57,7 @@ export function CryptoUsageGraph({
         node={graph}
         collapsed={collapsed}
         onToggle={toggle}
-        onSelectFinding={(id) => router.push(`/scans/${scanId}/findings/${id}`)}
+        onSelectFinding={(id) => router.push(`/scans/${scanId}/findings/${encodeURIComponent(id)}`)}
         isRoot
       />
     </div>

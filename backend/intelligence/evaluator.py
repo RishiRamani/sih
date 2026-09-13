@@ -38,6 +38,12 @@ def assess_finding(
     crqc_arrival_years: float | None = None,
 ) -> IntelligenceAssessment:
     mode = finding.metadata.get("mode")
+    effective_business_criticality = finding.metadata.get(
+        "business_criticality", business_criticality
+    )
+    effective_data_lifetime_years = finding.metadata.get(
+        "data_lifetime_years", data_lifetime_years
+    )
 
     classical = assess_classical_risk(
         algorithm_name=finding.algorithm,
@@ -52,7 +58,7 @@ def assess_finding(
     )
 
     mosca_kwargs = {
-        "data_lifetime_years": data_lifetime_years,
+        "data_lifetime_years": effective_data_lifetime_years,
         "migration_time_years": migration_time_years,
         "quantum_status": quantum.get("quantum_status", "UNKNOWN"),
     }
@@ -66,7 +72,7 @@ def assess_finding(
         classical=classical,
         quantum=quantum,
         mosca=mosca,
-        business_criticality=business_criticality,
+        business_criticality=effective_business_criticality,
         detection_confidence=finding.confidence,
     )
 

@@ -94,6 +94,10 @@ def create_scan(request: ScanRequest) -> ScanResult:
                     source_type,
                     source,
                 ),
+                business_criticality=request.business_criticality,
+                data_lifetime_years=request.data_lifetime_years,
+                migration_time_years=request.migration_time_years,
+                crqc_arrival_years=request.crqc_arrival_years,
             )
 
             result.target_path = source

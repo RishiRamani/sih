@@ -298,6 +298,11 @@ export interface BackendScanResult {
   started_at: string | null;
   completed_at: string | null;
   error: string | null;
+  business_criticality?: string;
+  data_lifetime_years?: number;
+  migration_time_years?: number;
+  crqc_arrival_years?: number | null;
+  coverage?: ScanCoverage;
 }
 
 export interface BackendScanRequest {

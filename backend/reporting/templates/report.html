@@ -1,0 +1,7 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>ECDAT report - {{ scan_id }}</title>
+<style>body{font:14px Arial,sans-serif;color:#17202a;max-width:1100px;margin:40px auto}h1{color:#123b57}table{border-collapse:collapse;width:100%;margin:12px 0 28px}th,td{border:1px solid #ccd6dd;padding:8px;text-align:left;vertical-align:top}th{background:#eaf0f4}pre{white-space:pre-wrap;background:#f4f6f7;padding:14px}li{margin:8px 0}@media print{body{margin:10mm}}</style></head>
+<body><h1>ECDAT Cryptographic Assessment Report</h1><p><strong>Target:</strong> {{ target }}<br><strong>Scan:</strong> {{ scan_id }}<br><strong>Total findings:</strong> {{ total_findings }}</p>
+<h2>Cryptographic inventory</h2><table><thead><tr><th>Algorithm</th><th>Location</th><th>Type</th><th>Confidence</th></tr></thead><tbody>{{ inventory_rows }}</tbody></table>
+<h2>High-risk findings</h2><table><thead><tr><th>Algorithm</th><th>Location</th><th>Type</th><th>Evidence</th></tr></thead><tbody>{{ high_risk_rows }}</tbody></table>
+<h2>Recommendations</h2><ul>{{ recommendations }}</ul><h2>Coverage and limitations</h2><pre>{{ coverage }}</pre></body></html>

@@ -71,6 +71,19 @@ class ScanRepository:
 
         return ScanResult.model_validate_json(row["result_json"])
 
+    def update(self, result: ScanResult) -> ScanResult:
+        if not result.scan_id:
+            raise ValueError("Cannot update a scan without a scan ID")
+        with get_connection() as connection:
+            cursor = connection.execute(
+                "UPDATE scans SET result_json = ?, status = ? WHERE scan_id = ?",
+                (result.model_dump_json(), result.status.value, result.scan_id),
+            )
+            connection.commit()
+        if cursor.rowcount == 0:
+            raise KeyError(result.scan_id)
+        return result
+
     def list(self) -> list[ScanResult]:
         """
         Retrieve all scans, newest first.

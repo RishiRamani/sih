@@ -28,3 +28,7 @@ def delete_scan(scan_id: str) -> bool:
     Delete a scan by ID.
     """
     return scan_repository.delete(scan_id)
+
+
+def update_scan(result: ScanResult) -> ScanResult:
+    return scan_repository.update(result)

@@ -45,6 +45,7 @@ export function toScan(raw: BackendScanResult): Scan {
       (i) => extractRiskLevel(i) === "HIGH" || extractRiskLevel(i) === "CRITICAL"
     ).length,
     errorMessage: raw.error ?? undefined,
+    coverage: raw.coverage,
   };
 }
 
@@ -248,22 +249,23 @@ function extractRiskExplanation(intel: BackendIntelligenceAssessment | undefined
 function extractClassicalStatus(intel: BackendIntelligenceAssessment | undefined): ExposureStatus {
   if (!intel) return "UNKNOWN";
   const classical = intel.risk_assessment?.classical ?? {};
-  const status = (classical.status as string) ?? (classical.assessment as string);
+  const status = (classical.classical_status as string) ?? (classical.status as string) ?? (classical.assessment as string);
   return normalizeExposure(status);
 }
 
 function extractQuantumStatus(intel: BackendIntelligenceAssessment | undefined): ExposureStatus {
   if (!intel) return "UNKNOWN";
   const quantum = intel.risk_assessment?.quantum ?? {};
-  const status = (quantum.status as string) ?? (quantum.assessment as string);
+  const status = (quantum.quantum_status as string) ?? (quantum.status as string) ?? (quantum.assessment as string);
   return normalizeExposure(status);
 }
 
 function normalizeExposure(s: string | undefined): ExposureStatus {
   if (!s) return "UNKNOWN";
   const upper = s.toUpperCase();
-  if (["SAFE", "WEAK", "BROKEN", "DEPRECATED", "UNKNOWN"].includes(upper)) {
-    return upper as ExposureStatus;
+  if (upper === "WEAKENED") return "WEAK";
+  if (["SAFE", "WEAK", "BROKEN", "DEPRECATED", "RESILIENT", "UNKNOWN"].includes(upper)) {
+    return upper === "RESILIENT" ? "SAFE" : upper as ExposureStatus;
   }
   return "UNKNOWN";
 }
@@ -288,7 +290,7 @@ export function toRecommendation(
     direction: normalizeDirection(r.direction),
     candidateAlgorithm: r.candidate_algorithms.join(", ") || "See rationale",
     priority: normalizePriority(r.migration_priority),
-    status: "NOT_STARTED",
+    status: normalizeRecommendationStatus(intel.metadata?.status as string | undefined),
     rationale: r.rationale,
     effort: normalizeMigrationEffort(r.effort),
     tradeOffs: r.trade_offs || undefined,
@@ -402,8 +404,16 @@ export function computeDashboardSummary(
     recentScans: [...scans].sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1)).slice(0, 5),
     coverageSummary: {
       scansCompleted: scans.filter((s) => s.status === "COMPLETED").length,
-      filesScanned: 0, // backend doesn't expose this
-      unsupportedFiles: 0,
+      filesScanned: scans.reduce((sum, scan) => sum + (scan.coverage?.filesScanned ?? 0), 0),
+      unsupportedFiles: scans.reduce((sum, scan) => sum + (scan.coverage?.unsupportedFiles ?? 0), 0),
     },
   };
+}
+
+function normalizeRecommendationStatus(value: string | undefined): Recommendation["status"] {
+  const status = value?.toUpperCase();
+  if (status === "IN_PROGRESS" || status === "MITIGATED" || status === "ACCEPTED_RISK") {
+    return status;
+  }
+  return "NOT_STARTED";
 }

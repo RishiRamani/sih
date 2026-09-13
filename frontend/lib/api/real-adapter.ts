@@ -175,7 +175,8 @@ export class RealApiAdapter implements ApiClient {
     const all = raw.findings.map((f, idx) =>
       toFinding(f, findIntelForFinding(raw.intelligence, idx, f), scanId)
     );
-    const found = all.find((f) => f.id === findingId);
+    const decodedFindingId = decodeURIComponent(findingId);
+    const found = all.find((f) => f.id === findingId || f.id === decodedFindingId);
     if (!found) throw new ApiError(`Finding ${findingId} not found in scan ${scanId}.`, 404);
     return found;
   }
@@ -222,8 +223,20 @@ export class RealApiAdapter implements ApiClient {
     findingId: string,
     assumptions: { dataLifetime?: string; businessCriticality?: string }
   ): Promise<Finding> {
-    // Backend has no endpoint for this — return the finding unchanged.
-    return this.getFinding(scanId, findingId);
+    const raw = await this.ensureScanLoaded(scanId);
+    const index = raw.findings.findIndex((f, idx) => this.toFindingId(scanId, f) === findingId);
+    if (index < 0) throw new ApiError(`Finding ${findingId} not found.`, 404);
+    const updated = await request<BackendFinding>(`/scans/${scanId}/findings/${index}`, {
+      method: "PATCH",
+      body: JSON.stringify({
+        data_lifetime_years: assumptions.dataLifetime
+          ? ({ SHORT: 1, MEDIUM: 3, LONG: 10, INDEFINITE: 20 } as Record<string, number>)[assumptions.dataLifetime] ?? Number(assumptions.dataLifetime)
+          : undefined,
+        business_criticality: assumptions.businessCriticality,
+      }),
+    });
+    raw.findings[index] = updated;
+    return toFinding(updated, raw.intelligence[index], scanId);
   }
 
   async getRecommendations(scanId: string): Promise<Recommendation[]> {
@@ -244,11 +257,17 @@ export class RealApiAdapter implements ApiClient {
     recommendationId: string,
     status: Recommendation["status"]
   ): Promise<Recommendation> {
-    // Backend has no endpoint. Return the recommendation unchanged.
-    const recs = await this.getRecommendations(scanId);
-    const rec = recs.find((r) => r.id === recommendationId);
-    if (!rec) throw new ApiError(`Recommendation ${recommendationId} not found.`, 404);
-    return { ...rec, status };
+    const match = recommendationId.match(/^rec:.+:(\d+)$/);
+    if (!match) throw new ApiError(`Recommendation ${recommendationId} not found.`, 404);
+    const index = Number(match[1]);
+    const updated = await request<BackendIntelligenceAssessment>(`/scans/${scanId}/recommendations/${index}`, {
+      method: "PATCH",
+      body: JSON.stringify({ status }),
+    });
+    const raw = await this.ensureScanLoaded(scanId);
+    raw.intelligence[index] = updated;
+    const finding = raw.findings[index];
+    return toRecommendation(updated, scanId, updated.algorithm ?? "Unknown", finding ? this.toFindingId(scanId, finding) : undefined);
   }
 
   async getReport(scanId: string): Promise<ReportResponse> {
@@ -259,6 +278,10 @@ export class RealApiAdapter implements ApiClient {
       generatedAt: raw.completed_at ?? new Date().toISOString(),
       payload: raw,
     };
+  }
+
+  private toFindingId(scanId: string, finding: BackendFinding): string {
+    return `${scanId}:${finding.asset_path}:${finding.line_start ?? 0}:${finding.algorithm ?? "unknown"}`;
   }
 
   // ----------------------------------------------------------------
