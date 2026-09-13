@@ -11,7 +11,7 @@ import {
   Atom,
   PlusCircle,
   FileWarning,
-  ArrowRight
+  ArrowRight,
 } from "lucide-react";
 import { AppShell } from "@/components/layout/AppShell";
 import { Card } from "@/components/ui/Card";
@@ -43,7 +43,6 @@ export default function DashboardPage() {
 
   return (
     <AppShell title="Dashboard">
-      {/* Page header */}
       <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="eyebrow">Fleet overview</p>
@@ -65,7 +64,6 @@ export default function DashboardPage() {
 
       {!loading && !error && data ? (
         <div className="space-y-6">
-          {/* Stat band */}
           <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
             <StatCard label="Crypto assets" value={data.cryptoAssets} icon={KeyRound} />
             <StatCard label="Algorithms" value={data.algorithms} icon={Binary} />
@@ -75,7 +73,6 @@ export default function DashboardPage() {
             <StatCard label="Quantum risk" value={data.quantumRisk} icon={Atom} tone="amber" />
           </div>
 
-          {/* Charts + coverage */}
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
             <Card title="Risk distribution" className="lg:col-span-2">
               <RiskDistributionChart data={data.riskDistribution} />
@@ -109,7 +106,6 @@ export default function DashboardPage() {
             </Card>
           </div>
 
-          {/* Top risky + recent */}
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             <Card title="Top risky algorithms & components">
               {data.topRiskyComponents.length === 0 ? (

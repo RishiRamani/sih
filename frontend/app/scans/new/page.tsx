@@ -9,11 +9,12 @@ import {
   Container,
   FileKey,
   FileText,
-  Loader2
+  Loader2,
 } from "lucide-react";
 import { AppShell } from "@/components/layout/AppShell";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
+import { useToast } from "@/components/ui/Toast";
 import { api } from "@/lib/api";
 import type { AssetInputType } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -29,11 +30,12 @@ const INPUT_TYPES: {
   { value: "BINARY_LIBRARY", label: "Binary / library", description: "Compiled binary, .jar, .so, or .dll", icon: Binary },
   { value: "CONTAINER_IMAGE", label: "Container image", description: "Image reference or exported archive", icon: Container },
   { value: "CERTIFICATE", label: "Certificate(s)", description: "X.509 certs, keystores, PEM bundles", icon: FileKey },
-  { value: "DEPENDENCY_MANIFEST", label: "Dependency manifest", description: "package.json, pom.xml, requirements.txt, etc.", icon: FileText }
+  { value: "DEPENDENCY_MANIFEST", label: "Dependency manifest", description: "package.json, pom.xml, requirements.txt, etc.", icon: FileText },
 ];
 
 export default function NewScanPage() {
   const router = useRouter();
+  const toast = useToast();
   const [inputType, setInputType] = useState<AssetInputType>("SOURCE_REPOSITORY");
   const [name, setName] = useState("");
   const [sourceLabel, setSourceLabel] = useState("");
@@ -43,26 +45,33 @@ export default function NewScanPage() {
   const selected = INPUT_TYPES.find((t) => t.value === inputType)!;
 
   async function handleSubmit(e: React.FormEvent) {
-  e.preventDefault();
-  if (!name.trim() || !sourceLabel.trim()) {
-    setError("Name and source are both required.");
-    return;
+    e.preventDefault();
+    if (!name.trim() || !sourceLabel.trim()) {
+      setError("Name and source are both required.");
+      toast({ tone: "error", title: "Missing input", description: "Name and source are both required." });
+      return;
+    }
+    setSubmitting(true);
+    setError(null);
+    try {
+      const scan = await api.createScan({
+        name: name.trim(),
+        inputType,
+        sourceLabel: sourceLabel.trim(),
+      });
+      toast({
+        tone: "success",
+        title: "Scan started",
+        description: `${scan.name} is now running.`,
+      });
+      router.push(`/scans/${scan.id}/findings`);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Failed to start scan.";
+      setError(msg);
+      toast({ tone: "error", title: "Scan failed", description: msg });
+      setSubmitting(false);
+    }
   }
-  setSubmitting(true);
-  setError(null);
-  try {
-    const scan = await api.createScan({
-      name: name.trim(),
-      inputType,
-      sourceLabel: sourceLabel.trim(),
-    });
-    // Backend runs the scan synchronously — no separate start call.
-    router.push(`/scans/${scan.id}/findings`);
-  } catch (err) {
-    setError(err instanceof Error ? err.message : "Failed to start scan.");
-    setSubmitting(false);
-  }
-}
 
   return (
     <AppShell title="New scan">

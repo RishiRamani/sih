@@ -11,14 +11,14 @@ interface StatCardProps {
 
 const toneClasses = {
   default: "text-accent",
-  amber: "text-accent",
-  crimson: "text-crimson",
-  teal: "text-teal"
+  amber: "text-amber",
+  crimson: "text-danger",
+  teal: "text-safe",
 };
 
 export function StatCard({ label, value, icon: Icon, tone = "default", hint }: StatCardProps) {
   return (
-    <div className="relative rounded border border-border bg-surface px-4 py-3.5">
+    <div className="relative rounded-md border border-border bg-surface px-4 py-3.5 shadow-subtle">
       <div className="flex items-center justify-between">
         <span className="text-[10px] font-semibold uppercase tracking-[0.11em] text-text-secondary">
           {label}

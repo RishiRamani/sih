@@ -2,20 +2,10 @@ import type { LucideIcon } from "lucide-react";
 import { Inbox, AlertCircle, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 
-export function EmptyState({
-  icon: Icon = Inbox,
-  title,
-  description,
-  action
-}: {
-  icon?: LucideIcon;
-  title: string;
-  description?: string;
-  action?: React.ReactNode;
-}) {
+export function EmptyState({ icon: Icon = Inbox, title = "", description = "", action = "" }) {
   return (
-    <div className="flex flex-col items-center justify-center rounded border border-dashed border-border bg-surface px-6 py-16 text-center">
-      <span className="flex h-11 w-11 items-center justify-center rounded-full border border-border bg-elevated/60 text-text-secondary">
+    <div className="flex flex-col items-center justify-center rounded-md border border-dashed border-border bg-surface px-6 py-16 text-center">
+      <span className="flex h-11 w-11 items-center justify-center rounded-full bg-accent-soft text-accent">
         <Icon size={19} />
       </span>
       <h3 className="mt-3 text-[13px] font-semibold uppercase tracking-[0.08em] text-text-primary">
@@ -31,18 +21,10 @@ export function EmptyState({
   );
 }
 
-export function ErrorState({
-  title = "Something went wrong",
-  description,
-  onRetry
-}: {
-  title?: string;
-  description?: string;
-  onRetry?: () => void;
-}) {
+export function ErrorState({ title = "Something went wrong", description = "", onRetry = ()=>{console.log("1")} }) {
   return (
-    <div className="flex flex-col items-center justify-center rounded border border-crimson/35 bg-crimson/6 px-6 py-16 text-center">
-      <span className="flex h-11 w-11 items-center justify-center rounded-full border border-crimson/35 bg-crimson/10 text-crimson">
+    <div className="flex flex-col items-center justify-center rounded-md border border-danger/30 bg-danger-soft px-6 py-16 text-center">
+      <span className="flex h-11 w-11 items-center justify-center rounded-full border border-danger/30 bg-danger/10 text-danger">
         <AlertCircle size={18} />
       </span>
       <h3 className="mt-3 text-[13px] font-semibold uppercase tracking-[0.08em] text-text-primary">

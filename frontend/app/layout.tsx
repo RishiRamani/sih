@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { ThemeProvider } from "@/components/theme/ThemeProvider";
+import { ToastProvider } from "@/components/ui/Toast";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -8,13 +9,11 @@ export const metadata: Metadata = {
     "Cryptographic inventory, CBOM, and quantum-readiness risk assessment for enterprise software assets.",
 };
 
-// Runs before React hydrates. Reads localStorage and applies the class
-// to <html> so there is no flash of the wrong theme.
 const themeInitScript = `
 (function() {
   try {
     var stored = localStorage.getItem('ecdat-theme');
-    var theme = (stored === 'light' || stored === 'dark') ? stored : 'dark';
+    var theme = (stored === 'light' || stored === 'dark') ? stored : 'light';
     var root = document.documentElement;
     root.classList.remove('dark', 'light');
     root.classList.add(theme);
@@ -29,12 +28,14 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className="dark" suppressHydrationWarning>
+    <html lang="en" className="light" suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
       </head>
       <body>
-        <ThemeProvider>{children}</ThemeProvider>
+        <ThemeProvider>
+          <ToastProvider>{children}</ToastProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

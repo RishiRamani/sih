@@ -3,14 +3,14 @@ import type { RiskLevel, Confidence, ScanStatus, ExposureStatus } from "@/lib/ty
 import { AlertTriangle, AlertOctagon, Info, CheckCircle2, HelpCircle, Leaf } from "lucide-react";
 
 const baseClasses =
-  "inline-flex items-center gap-1.5 rounded-sm border px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.05em] whitespace-nowrap";
+  "inline-flex items-center gap-1.5 rounded border px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.05em] whitespace-nowrap";
 
 export function RiskBadge({ level }: { level: RiskLevel }) {
   const styles: Record<RiskLevel, string> = {
-    LOW:      "bg-teal/10 text-teal border-teal/35",
-    MEDIUM:   "bg-accent/10 text-accent border-accent/35",
-    HIGH:     "bg-crimson/12 text-crimson border-crimson/40",
-    CRITICAL: "bg-crimson/20 text-crimson border-crimson/55"
+    LOW:      "bg-safe-soft text-safe border-safe/35",
+    MEDIUM:   "bg-amber-soft text-amber border-amber/40",
+    HIGH:     "bg-orange-soft text-orange border-orange/40",
+    CRITICAL: "bg-danger-soft text-danger border-danger/45",
   };
   const Icon = level === "LOW" ? Leaf : level === "MEDIUM" ? Info : level === "HIGH" ? AlertTriangle : AlertOctagon;
   return (
@@ -23,24 +23,24 @@ export function RiskBadge({ level }: { level: RiskLevel }) {
 
 export function ConfidenceBadge({ level }: { level: Confidence }) {
   const styles: Record<Confidence, string> = {
-    HIGH:   "bg-accent/10 text-accent border-accent/35",
-    MEDIUM: "bg-highlight/10 text-highlight border-highlight/30",
-    LOW:    "bg-text-secondary/8 text-text-secondary border-border"
+    HIGH:   "bg-accent-soft text-accent border-accent/35",
+    MEDIUM: "bg-amber-soft text-amber border-amber/35",
+    LOW:    "bg-elevated text-text-secondary border-border",
   };
   return <span className={cn(baseClasses, styles[level])}>{CONFIDENCE_LABEL[level]}</span>;
 }
 
 export function ExposureBadge({ status, label }: { status: ExposureStatus; label: string }) {
   const styles: Record<ExposureStatus, string> = {
-    SAFE:       "bg-teal/10 text-teal border-teal/35",
-    WEAK:       "bg-accent/10 text-accent border-accent/35",
-    BROKEN:     "bg-crimson/15 text-crimson border-crimson/45",
-    DEPRECATED: "bg-accent/10 text-accent border-accent/35",
-    UNKNOWN:    "bg-text-secondary/8 text-text-secondary border-border"
+    SAFE:       "bg-safe-soft text-safe border-safe/35",
+    WEAK:       "bg-amber-soft text-amber border-amber/35",
+    BROKEN:     "bg-danger-soft text-danger border-danger/45",
+    DEPRECATED: "bg-orange-soft text-orange border-orange/40",
+    UNKNOWN:    "bg-elevated text-text-secondary border-border",
   };
   const text: Record<ExposureStatus, string> = {
     SAFE: "Safe", WEAK: "Weak", BROKEN: "Broken",
-    DEPRECATED: "Deprecated", UNKNOWN: "Unknown"
+    DEPRECATED: "Deprecated", UNKNOWN: "Unknown",
   };
   return (
     <span className={cn(baseClasses, styles[status])}>
@@ -53,11 +53,11 @@ export function ScanStatusBadge({ status }: { status: ScanStatus }) {
   const isTerminalOk = status === "COMPLETED";
   const isFailed = status === "FAILED";
   const styles = isTerminalOk
-    ? "bg-teal/10 text-teal border-teal/35"
+    ? "bg-safe-soft text-safe border-safe/35"
     : isFailed
-      ? "bg-crimson/15 text-crimson border-crimson/45"
-      : "bg-accent/10 text-accent border-accent/35";
-  const dot = isTerminalOk ? "bg-teal" : isFailed ? "bg-crimson" : "bg-accent";
+      ? "bg-danger-soft text-danger border-danger/45"
+      : "bg-accent-soft text-accent border-accent/35";
+  const dot = isTerminalOk ? "bg-safe" : isFailed ? "bg-danger" : "bg-accent";
   return (
     <span className={cn(baseClasses, styles)}>
       <span className={cn("h-1.5 w-1.5 rounded-full", dot)} aria-hidden />
@@ -77,7 +77,7 @@ export function UnknownValue({ label = "Unknown" }: { label?: string }) {
 
 export function AssumptionTag() {
   return (
-    <span className="inline-flex items-center gap-1 rounded-sm border border-highlight/35 bg-highlight/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-highlight">
+    <span className="inline-flex items-center gap-1 rounded border border-amber/35 bg-amber-soft px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-amber">
       <Info size={9} />
       Assumed
     </span>

@@ -3,61 +3,113 @@
 @tailwind utilities;
 
 :root {
-  --font-sans: "Inter", "IBM Plex Sans", system-ui, sans-serif;
-  --font-mono: "IBM Plex Mono", "JetBrains Mono", ui-monospace, monospace;
+  /* ─── Fonts — change these two lines to change the app font everywhere ─── */
+  --font-app: "JetBrains Mono", "IBM Plex Mono", ui-monospace, monospace;
+--font-display: "JetBrains Mono", "IBM Plex Mono", ui-monospace, monospace;
+  --font-mono: var(--font-app);
 
-  /* Default = dark ("Sepia Night"). Ensures no colorless frame during swap. */
-  --color-base: 21 18 16;           /* #151210 */
-  --color-surface: 33 29 24;        /* #211D18 */
-  --color-elevated: 42 36 29;       /* #2A241D */
-  --color-border: 58 50 40;         /* #3A3228 */
+  /* ─── Light palette (default) ───────────────────────────── */
+  --color-base: 245 246 244;           /* #F5F6F4 main background */
+  --color-surface: 255 255 255;        /* #FFFFFF cards */
+  --color-elevated: 250 250 249;       /* #FAFAF9 subtle raised */
+  --color-border: 220 225 228;         /* #DCE1E4 borders */
+  --color-rule: 205 212 216;
 
-  --color-accent: 214 168 79;       /* #D6A84F antique gold */
-  --color-secondary: 184 107 82;    /* #B86B52 terracotta */
-  --color-teal: 127 163 138;        /* #7FA38A sage — kept name for compat */
-  --color-highlight: 216 199 165;   /* #D8C7A5 parchment */
+  --color-accent: 23 107 104;          /* #176B68 deep teal */
+  --color-accent-bright: 30 138 133;   /* #1E8A85 hover teal */
+  --color-accent-soft: 229 241 240;    /* #E5F1F0 hover/selected bg */
 
-  --color-text-primary: 241 233 218;   /* #F1E9DA */
-  --color-text-secondary: 158 148 133; /* #9E9485 */
+  /* Text that sits ON TOP of an accent surface */
+  --color-on-accent: 245 246 244;      /* near-white on deep teal */
 
-  --color-amber: 214 168 79;        /* #D6A84F gold */
-  --color-crimson: 198 93 82;       /* #C65D52 */
+  --color-danger: 145 61 61;           /* #913D3D critical */
+  --color-danger-soft: 240 229 228;
+  --color-safe: 94 140 114;            /* #5E8C72 low risk */
+  --color-safe-soft: 234 241 236;
+
+  --color-amber: 194 148 62;           /* #C2943E medium */
+  --color-amber-soft: 246 238 222;
+  --color-orange: 183 101 81;          /* #B76551 high */
+  --color-orange-soft: 245 231 226;
+
+  --color-sidebar: 23 33 43;           /* #17212B dark charcoal/navy */
+
+  --color-text-primary: 24 33 42;      /* #18212A near-black */
+  --color-text-secondary: 100 113 125; /* #64717D slate gray */
+  --color-text-dim: 145 155 164;
+
+  /* Text on dark surfaces (topbar / sidebar when used) */
+  --color-text-inverse: 232 236 238;
+  --color-text-inverse-dim: 138 148 158;
 }
 
-.dark {
-  --color-base: 21 18 16;
-  --color-surface: 33 29 24;
-  --color-elevated: 42 36 29;
-  --color-border: 58 50 40;
-
-  --color-accent: 214 168 79;
-  --color-secondary: 184 107 82;
-  --color-teal: 127 163 138;
-  --color-highlight: 216 199 165;
-
-  --color-text-primary: 241 233 218;
-  --color-text-secondary: 158 148 133;
-
-  --color-amber: 214 168 79;
-  --color-crimson: 198 93 82;
-}
-
+/* ─── Explicit light override (belt-and-braces; matches :root) ───── */
 .light {
-  --color-base: 240 235 225;        /* #F0EBE1 */
-  --color-surface: 248 245 238;     /* #F8F5EE */
-  --color-elevated: 255 253 248;    /* #FFFDF8 */
-  --color-border: 216 208 194;      /* #D8D0C2 */
+  --color-base: 245 246 244;
+  --color-surface: 255 255 255;
+  --color-elevated: 250 250 249;
+  --color-border: 220 225 228;
+  --color-rule: 205 212 216;
 
-  --color-accent: 154 107 34;       /* #9A6B22 */
-  --color-secondary: 169 83 62;     /* #A9533E */
-  --color-teal: 88 120 96;          /* #587860 */
-  --color-highlight: 91 81 70;      /* #5B5146 ink */
+  --color-accent: 23 107 104;
+  --color-accent-bright: 30 138 133;
+  --color-accent-soft: 229 241 240;
 
-  --color-text-primary: 40 36 31;   /* #28241F */
-  --color-text-secondary: 116 107 96; /* #746B60 */
+  --color-on-accent: 245 246 244;      /* near-white on deep teal */
 
-  --color-amber: 154 107 34;
-  --color-crimson: 169 83 62;
+  --color-danger: 145 61 61;
+  --color-danger-soft: 240 229 228;
+  --color-safe: 94 140 114;
+  --color-safe-soft: 234 241 236;
+
+  --color-amber: 194 148 62;
+  --color-amber-soft: 246 238 222;
+  --color-orange: 183 101 81;
+  --color-orange-soft: 245 231 226;
+
+  --color-sidebar: 23 33 43;
+
+  --color-text-primary: 24 33 42;
+  --color-text-secondary: 100 113 125;
+  --color-text-dim: 145 155 164;
+
+  --color-text-inverse: 232 236 238;
+  --color-text-inverse-dim: 138 148 158;
+}
+
+/* ─── Dark mode ─────────────────────────────────────────── */
+.dark {
+  --color-base: 15 17 20;
+  --color-surface: 24 27 32;
+  --color-elevated: 32 36 42;
+  --color-border: 45 50 58;
+  --color-rule: 60 67 76;
+
+  --color-accent: 79 197 190;          /* light cyan */
+  --color-accent-bright: 108 217 210;
+  --color-accent-soft: 21 42 42;
+
+  /* Because accent is LIGHT cyan, text on it must be DARK */
+  --color-on-accent: 15 17 20;         /* deep ink on cyan */
+
+  --color-danger: 200 100 100;
+  --color-danger-soft: 46 28 28;
+  --color-safe: 122 176 143;
+  --color-safe-soft: 26 38 30;
+
+  --color-amber: 220 175 90;
+  --color-amber-soft: 48 40 22;
+  --color-orange: 210 130 105;
+  --color-orange-soft: 48 30 26;
+
+  --color-sidebar: 15 17 20;
+
+  --color-text-primary: 232 236 238;
+  --color-text-secondary: 155 165 174;
+  --color-text-dim: 100 110 120;
+
+  --color-text-inverse: 232 236 238;
+  --color-text-inverse-dim: 138 148 158;
 }
 
 @layer base {
@@ -66,12 +118,14 @@
   body {
     background-color: rgb(var(--color-base));
     color: rgb(var(--color-text-primary));
-    font-family: var(--font-sans);
+    font-family: var(--font-app);
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
   }
 
   * { border-color: rgb(var(--color-border)); }
+
+  h1, h2, h3 { font-family: var(--font-display); }
 
   h1 { @apply text-[15px] font-semibold tracking-[-0.01em] text-text-primary; }
   h2 { @apply text-xl font-semibold tracking-[-0.02em] text-text-primary; }
@@ -92,7 +146,6 @@
 @layer utilities {
   .font-mono-tabular { font-variant-numeric: tabular-nums; }
 
-  /* Signature label style — archival catalogue */
   .eyebrow {
     font-size: 11px;
     font-weight: 600;
@@ -101,7 +154,6 @@
     color: rgb(var(--color-text-secondary));
   }
 
-  /* A hairline rule used under section titles */
   .rule {
     height: 1px;
     background: linear-gradient(
@@ -110,10 +162,21 @@
       rgb(var(--color-border) / 0.3)
     );
   }
+
+  @keyframes pulse-accent {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.35; }
+  }
+  .pulse-accent { animation: pulse-accent 2s ease-in-out infinite; }
+
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateX(12px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
 }
 
 ::selection {
-  background-color: rgb(var(--color-accent) / 0.35);
+  background-color: rgb(var(--color-accent) / 0.28);
   color: rgb(var(--color-text-primary));
 }
 

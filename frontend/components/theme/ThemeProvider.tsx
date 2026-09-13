@@ -22,15 +22,15 @@ const ThemeContext = createContext<ThemeContextValue | null>(null);
 const STORAGE_KEY = "ecdat-theme";
 
 function readStoredTheme(): Theme {
-  if (typeof window === "undefined") return "dark";
+  if (typeof window === "undefined") return "light";
   const stored = window.localStorage.getItem(STORAGE_KEY);
-  return stored === "light" || stored === "dark" ? stored : "dark";
+  return stored === "light" || stored === "dark" ? stored : "light";
 }
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   // Start with "dark" on both server and client so hydration matches.
   // The inline script below sets the real value before paint.
-  const [theme, setThemeState] = useState<Theme>("dark");
+  const [theme, setThemeState] = useState<Theme>("light");
   const [mounted, setMounted] = useState(false);
 
   // On mount: read what the inline script already applied.

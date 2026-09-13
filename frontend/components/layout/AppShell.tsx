@@ -1,21 +1,37 @@
 "use client";
 
-import { useState } from "react";
-import { Sidebar, MobileSidebar } from "@/components/layout/Sidebar";
-import { TopBar } from "@/components/layout/TopBar";
+import { AppNav } from "@/components/layout/AppNav";
 
-export function AppShell({ title, children }: { title?: string; children: React.ReactNode }) {
-  const [mobileOpen, setMobileOpen] = useState(false);
+export function AppShell({
+  title,
+  children,
+}: {
+  title?: string;
+  children: React.ReactNode;
+}) {
   return (
-    <div className="flex h-screen bg-base">
-      <Sidebar />
-      <MobileSidebar open={mobileOpen} onClose={() => setMobileOpen(false)} />
-      <div className="flex min-w-0 flex-1 flex-col">
-        <TopBar onMenuClick={() => setMobileOpen(true)} title={title} />
-        <main className="flex-1 overflow-y-auto px-4 py-5 md:px-6 md:py-6">
-          <div className="mx-auto max-w-[1400px]">{children}</div>
-        </main>
-      </div>
+    <div className="flex min-h-screen flex-col bg-base">
+      <AppNav />
+      <main className="flex-1">
+        <div className="mx-auto max-w-[1400px] px-6 py-8 md:px-8 md:py-10">
+          {title ? (
+            <div className="mb-8">
+              <p className="eyebrow">{title}</p>
+            </div>
+          ) : null}
+          {children}
+        </div>
+      </main>
+      <footer className="border-t border-rule">
+        <div className="mx-auto flex max-w-[1400px] items-center justify-between px-6 py-4 md:px-8">
+          <span className="font-mono text-[10px] uppercase tracking-[0.15em] text-text-dim">
+            ECDAT · SIH26164
+          </span>
+          <span className="font-mono text-[10px] uppercase tracking-[0.15em] text-text-dim">
+            build v1.2.6
+          </span>
+        </div>
+      </footer>
     </div>
   );
 }
