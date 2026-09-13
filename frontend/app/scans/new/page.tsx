@@ -43,26 +43,26 @@ export default function NewScanPage() {
   const selected = INPUT_TYPES.find((t) => t.value === inputType)!;
 
   async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!name.trim() || !sourceLabel.trim()) {
-      setError("Name and source are both required.");
-      return;
-    }
-    setSubmitting(true);
-    setError(null);
-    try {
-      const scan = await api.createScan({
-        name: name.trim(),
-        inputType,
-        sourceLabel: sourceLabel.trim()
-      });
-      await api.startScan(scan.id);
-      router.push(`/scans/${scan.id}/progress`);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to start scan.");
-      setSubmitting(false);
-    }
+  e.preventDefault();
+  if (!name.trim() || !sourceLabel.trim()) {
+    setError("Name and source are both required.");
+    return;
   }
+  setSubmitting(true);
+  setError(null);
+  try {
+    const scan = await api.createScan({
+      name: name.trim(),
+      inputType,
+      sourceLabel: sourceLabel.trim(),
+    });
+    // Backend runs the scan synchronously — no separate start call.
+    router.push(`/scans/${scan.id}/findings`);
+  } catch (err) {
+    setError(err instanceof Error ? err.message : "Failed to start scan.");
+    setSubmitting(false);
+  }
+}
 
   return (
     <AppShell title="New scan">

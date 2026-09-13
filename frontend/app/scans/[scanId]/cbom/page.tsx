@@ -14,6 +14,7 @@ import { api } from "@/lib/api";
 import type { CbomResponse } from "@/lib/api/client";
 import type { Finding } from "@/lib/types";
 import { INPUT_TYPE_LABEL, formatDate } from "@/lib/utils";
+import { CryptoUsageGraph } from "@/components/charts/CryptoUsageGraph";
 
 const PAGE_SIZE = 20;
 
@@ -160,8 +161,19 @@ export default function CbomPage({ params }: { params: { scanId: string } }) {
               onPageChange={setPage}
             />
           </Card>
+          {data.findings.length > 0 ? (
+  <Card title="Crypto usage graph (preview)" className="mt-4" bodyClassName="px-5 py-5">
+    <CryptoUsageGraph
+      findings={data.findings}
+      scanId={scanId}
+      rootLabel={data.findings.length + " findings"}
+      groupBy="sourcePath"
+    />
+  </Card>
+) : null}
         </>
       ) : null}
+      
     </AppShell>
   );
 }

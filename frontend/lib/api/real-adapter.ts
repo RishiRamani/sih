@@ -3,7 +3,7 @@ import type {
   CbomResponse,
   FindingsQuery,
   FindingsResponse,
-  ReportResponse
+  ReportResponse,
 } from "@/lib/api/client";
 import { ApiError } from "@/lib/api/client";
 import type {
@@ -12,8 +12,18 @@ import type {
   NewScanInput,
   DashboardSummary,
   QuantumReadinessSummary,
-  Recommendation
+  Recommendation,
+  BackendScanResult,
+  BackendFinding,
+  BackendIntelligenceAssessment,
 } from "@/lib/types";
+import {
+  toScan,
+  toFinding,
+  toRecommendation,
+  toQuantumReadinessSummary,
+  computeDashboardSummary,
+} from "./transform";
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
 
@@ -22,125 +32,258 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   try {
     res = await fetch(`${BASE_URL}${path}`, {
       ...init,
-      headers: { "Content-Type": "application/json", ...(init?.headers ?? {}) }
+      headers: { "Content-Type": "application/json", ...(init?.headers ?? {}) },
     });
-  } catch (err) {
+  } catch {
     throw new ApiError(`Could not reach ECDAT backend at ${BASE_URL}${path}.`);
   }
   if (!res.ok) {
     let message = `Request to ${path} failed with status ${res.status}.`;
     try {
       const body = await res.json();
-      if (body?.detail) message = String(body.detail);
-    } catch {
-      // ignore body parse failure, keep default message
-    }
+      if (body?.detail) {
+        message = typeof body.detail === "string"
+          ? body.detail
+          : JSON.stringify(body.detail);
+      }
+    } catch { /* ignore */ }
     throw new ApiError(message, res.status);
   }
   if (res.status === 204) return undefined as T;
   return (await res.json()) as T;
 }
 
-function qs(query: Record<string, string | number | undefined>): string {
-  const params = new URLSearchParams();
-  Object.entries(query).forEach(([k, v]) => {
-    if (v !== undefined && v !== "") params.set(k, String(v));
-  });
-  const s = params.toString();
-  return s ? `?${s}` : "";
-}
-
-/**
- * Talks to the real ECDAT FastAPI backend using the endpoints listed in the
- * API/DB specification. This is intentionally thin — no business logic,
- * no client-side risk math — it only shapes requests/responses to match
- * the ApiClient contract. Swap this in via NEXT_PUBLIC_USE_MOCK_API=false.
- */
 export class RealApiAdapter implements ApiClient {
+  // Cache the last fetched full scan results so subsequent calls don't re-fetch
+  private scanCache = new Map<string, BackendScanResult>();
+
   async getDashboardSummary(): Promise<DashboardSummary> {
-    // NOTE: not in the base resource list in the spec. Until a dedicated
-    // /dashboard endpoint exists, point this at the backend's summary
-    // endpoint once defined.
-    return request<DashboardSummary>("/dashboard/summary");
-  }
+    const scans = await this.listScans();
+    const findingsByScan = new Map<string, Finding[]>();
+    const completed = scans.filter((s) => s.status === "COMPLETED");
 
-  listScans(): Promise<Scan[]> {
-    return request<Scan[]>("/scans");
-  }
-
-  createScan(input: NewScanInput): Promise<Scan> {
-    return request<Scan>("/scans", { method: "POST", body: JSON.stringify(input) });
-  }
-
-  getScan(scanId: string): Promise<Scan> {
-    return request<Scan>(`/scans/${scanId}`);
-  }
-
-  startScan(scanId: string): Promise<Scan> {
-    return request<Scan>(`/scans/${scanId}/start`, { method: "POST" });
-  }
-
-  getScanStatus(scanId: string): Promise<Scan> {
-    return request<Scan>(`/scans/${scanId}/status`);
-  }
-
-  getFindings(scanId: string, query: FindingsQuery = {}): Promise<FindingsResponse> {
-    return request<FindingsResponse>(
-      `/scans/${scanId}/findings${qs({
-        risk_level: query.riskLevel,
-        confidence: query.confidence,
-        algorithm: query.algorithm,
-        asset_type: query.assetType,
-        input_type: query.inputType,
-        library: query.library,
-        search: query.search,
-        page: query.page,
-        page_size: query.pageSize,
-        sort_by: query.sortBy,
-        sort_dir: query.sortDir
-      })}`
+    await Promise.all(
+      completed.map(async (s) => {
+        const findings = await this.getFindings(s.id, { pageSize: 10000 });
+        findingsByScan.set(s.id, findings.items);
+      })
     );
+
+    return computeDashboardSummary(scans, findingsByScan);
   }
 
-  getFinding(scanId: string, findingId: string): Promise<Finding> {
-    return request<Finding>(`/scans/${scanId}/findings/${findingId}`);
+  async listScans(): Promise<Scan[]> {
+    const raw = await request<BackendScanResult[]>("/scans");
+    raw.forEach((r) => {
+      if (r.scan_id) this.scanCache.set(r.scan_id, r);
+    });
+    return raw.map(toScan);
   }
 
-  getCbom(scanId: string): Promise<CbomResponse> {
-    return request<CbomResponse>(`/scans/${scanId}/cbom`);
+  async createScan(input: NewScanInput): Promise<Scan> {
+    // Backend: { source_type: "local"|"git", source, target_path }
+    // Frontend sends { name, inputType, sourceLabel }
+    const isGit =
+      input.inputType === "SOURCE_REPOSITORY" &&
+      /^(https?:\/\/|git@)/.test(input.sourceLabel);
+
+    const body = isGit
+      ? { source_type: "git", source: input.sourceLabel }
+      : { source_type: "local", target_path: input.sourceLabel };
+
+    const raw = await request<BackendScanResult>("/scans", {
+      method: "POST",
+      body: JSON.stringify(body),
+    });
+    if (raw.scan_id) this.scanCache.set(raw.scan_id, raw);
+    return toScan(raw);
   }
 
-  getRisk(scanId: string): Promise<QuantumReadinessSummary> {
-    return request<QuantumReadinessSummary>(`/scans/${scanId}/risks`);
+  async getScan(scanId: string): Promise<Scan> {
+    const raw = await request<BackendScanResult>(`/scans/${scanId}`);
+    this.scanCache.set(scanId, raw);
+    return toScan(raw);
   }
 
-  updateFindingAssumptions(
+  // Backend has no separate /start — scan runs on create.
+  // Just return the already-cached result.
+  async startScan(scanId: string): Promise<Scan> {
+    const cached = this.scanCache.get(scanId);
+    if (cached) return toScan(cached);
+    return this.getScan(scanId);
+  }
+
+  // Backend has no /status endpoint. Return the cached scan immediately.
+  // This makes the progress page jump straight to COMPLETED.
+  async getScanStatus(scanId: string): Promise<Scan> {
+    const cached = this.scanCache.get(scanId);
+    if (cached) return toScan(cached);
+    return this.getScan(scanId);
+  }
+
+  async getFindings(scanId: string, query: FindingsQuery = {}): Promise<FindingsResponse> {
+    let raw = await this.ensureScanLoaded(scanId);
+    let findings = raw.findings.map((f, idx) =>
+      toFinding(f, findIntelForFinding(raw.intelligence, idx, f), scanId)
+    );
+
+    // Apply filtering client-side (backend has no query params)
+    if (query.riskLevel) findings = findings.filter((f) => f.riskLevel === query.riskLevel);
+    if (query.confidence) findings = findings.filter((f) => f.confidence === query.confidence);
+    if (query.algorithm) findings = findings.filter((f) => f.algorithm === query.algorithm);
+    if (query.assetType) findings = findings.filter((f) => f.assetType === query.assetType);
+    if (query.library) findings = findings.filter((f) => f.library === query.library);
+    if (query.search) {
+      const q = query.search.toLowerCase();
+      findings = findings.filter(
+        (f) =>
+          f.algorithm.toLowerCase().includes(q) ||
+          (f.library ?? "").toLowerCase().includes(q) ||
+          (f.sourcePath ?? "").toLowerCase().includes(q)
+      );
+    }
+
+    // Sort
+    if (query.sortBy) {
+      const dir = query.sortDir === "desc" ? -1 : 1;
+      const key = query.sortBy as keyof Finding;
+      findings = [...findings].sort((a, b) => {
+        const av = a[key]; const bv = b[key];
+        if (av === undefined || bv === undefined) return 0;
+        if (av < bv) return -1 * dir;
+        if (av > bv) return 1 * dir;
+        return 0;
+      });
+    }
+
+    // Paginate
+    const total = findings.length;
+    const page = query.page ?? 1;
+    const pageSize = query.pageSize ?? 20;
+    const start = (page - 1) * pageSize;
+
+    return {
+      items: findings.slice(start, start + pageSize),
+      total,
+      page,
+      pageSize,
+    };
+  }
+
+  async getFinding(scanId: string, findingId: string): Promise<Finding> {
+    const raw = await this.ensureScanLoaded(scanId);
+    const all = raw.findings.map((f, idx) =>
+      toFinding(f, findIntelForFinding(raw.intelligence, idx, f), scanId)
+    );
+    const found = all.find((f) => f.id === findingId);
+    if (!found) throw new ApiError(`Finding ${findingId} not found in scan ${scanId}.`, 404);
+    return found;
+  }
+
+  async getCbom(scanId: string): Promise<CbomResponse> {
+    // The backend's /cbom returns a real CycloneDX CBOM, which is different
+    // from our frontend's CbomResponse shape. Synthesize ours from findings.
+    const raw = await this.ensureScanLoaded(scanId);
+    const findings = raw.findings.map((f, idx) =>
+      toFinding(f, findIntelForFinding(raw.intelligence, idx, f), scanId)
+    );
+    const components = Array.from(
+      new Map(
+        findings
+          .filter((f) => f.library)
+          .map((f) => [
+            `${f.library}@${f.libraryVersion ?? "?"}`,
+            {
+              application: displayName(raw.target_path),
+              library: f.library!,
+              libraryVersion: f.libraryVersion,
+            },
+          ])
+      ).values()
+    );
+    return {
+      scanId,
+      generatedAt: raw.completed_at ?? new Date().toISOString(),
+      components,
+      findings,
+    };
+  }
+
+  async getRisk(scanId: string): Promise<QuantumReadinessSummary> {
+    const raw = await this.ensureScanLoaded(scanId);
+    const findings = raw.findings.map((f, idx) =>
+      toFinding(f, findIntelForFinding(raw.intelligence, idx, f), scanId)
+    );
+    return toQuantumReadinessSummary(raw.intelligence, findings);
+  }
+
+  async updateFindingAssumptions(
     scanId: string,
     findingId: string,
     assumptions: { dataLifetime?: string; businessCriticality?: string }
   ): Promise<Finding> {
-    return request<Finding>(`/scans/${scanId}/findings/${findingId}/assumptions`, {
-      method: "PATCH",
-      body: JSON.stringify(assumptions)
-    });
+    // Backend has no endpoint for this — return the finding unchanged.
+    return this.getFinding(scanId, findingId);
   }
 
-  getRecommendations(scanId: string): Promise<Recommendation[]> {
-    return request<Recommendation[]>(`/scans/${scanId}/recommendations`);
+  async getRecommendations(scanId: string): Promise<Recommendation[]> {
+    const raw = await this.ensureScanLoaded(scanId);
+    return raw.intelligence
+      .filter((i) => i.recommendation && i.recommendation.direction !== "NONE")
+      .map((i) =>
+        toRecommendation(i, scanId, i.algorithm ?? "Unknown")
+      );
   }
 
-  updateRecommendationStatus(
+  async updateRecommendationStatus(
     scanId: string,
     recommendationId: string,
     status: Recommendation["status"]
   ): Promise<Recommendation> {
-    return request<Recommendation>(`/scans/${scanId}/recommendations/${recommendationId}`, {
-      method: "PATCH",
-      body: JSON.stringify({ status })
-    });
+    // Backend has no endpoint. Return the recommendation unchanged.
+    const recs = await this.getRecommendations(scanId);
+    const rec = recs.find((r) => r.id === recommendationId);
+    if (!rec) throw new ApiError(`Recommendation ${recommendationId} not found.`, 404);
+    return { ...rec, status };
   }
 
-  getReport(scanId: string): Promise<ReportResponse> {
-    return request<ReportResponse>(`/scans/${scanId}/report`);
+  async getReport(scanId: string): Promise<ReportResponse> {
+    const raw = await this.ensureScanLoaded(scanId);
+    return {
+      scanId,
+      format: "json",
+      generatedAt: raw.completed_at ?? new Date().toISOString(),
+      payload: raw,
+    };
   }
+
+  // ----------------------------------------------------------------
+  // Helpers
+  // ----------------------------------------------------------------
+
+  private async ensureScanLoaded(scanId: string): Promise<BackendScanResult> {
+    const cached = this.scanCache.get(scanId);
+    if (cached) return cached;
+    const raw = await request<BackendScanResult>(`/scans/${scanId}`);
+    this.scanCache.set(scanId, raw);
+    return raw;
+  }
+}
+
+function findIntelForFinding(
+  intelligence: BackendIntelligenceAssessment[],
+  index: number,
+  finding: BackendFinding
+): BackendIntelligenceAssessment | undefined {
+  // Match by index first
+  const byIndex = intelligence.find((i) => i.finding_index === index);
+  if (byIndex) return byIndex;
+  // Fall back to algorithm match
+  return intelligence.find((i) => i.algorithm === finding.algorithm);
+}
+
+function displayName(path: string): string {
+  const trimmed = path.replace(/[\\/]+$/, "");
+  const parts = trimmed.split(/[\\/]/);
+  return parts[parts.length - 1] || path;
 }

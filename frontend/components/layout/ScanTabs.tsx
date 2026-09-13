@@ -7,12 +7,13 @@ import { cn } from "@/lib/utils";
 export function ScanTabs({ scanId }: { scanId: string }) {
   const pathname = usePathname();
   const tabs = [
-    { href: `/scans/${scanId}/progress`, label: "Progress" },
-    { href: `/scans/${scanId}/findings`, label: "Findings" },
-    { href: `/scans/${scanId}/cbom`, label: "Inventory / CBOM" },
-    { href: `/scans/${scanId}/risk`, label: "Risk & readiness" },
-    { href: `/scans/${scanId}/recommendations`, label: "Recommendations" }
-  ];
+  { href: `/scans/${scanId}/progress`, label: "Progress" },
+  { href: `/scans/${scanId}/findings`, label: "Findings" },
+  { href: `/scans/${scanId}/cbom`, label: "Inventory / CBOM" },
+  { href: `/scans/${scanId}/graph`, label: "Usage graph" },     
+  { href: `/scans/${scanId}/risk`, label: "Risk & readiness" },
+  { href: `/scans/${scanId}/recommendations`, label: "Recommendations" },
+];
   return (
     <div className="mb-5 flex gap-1 overflow-x-auto border-b border-border">
       {tabs.map((tab) => {

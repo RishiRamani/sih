@@ -208,3 +208,79 @@ export interface NewScanInput {
   sourceLabel: string;
   fileName?: string;
 }
+
+// === Real backend types (from openapi.json) ===
+
+export type BackendScanStatus =
+  | "created"
+  | "queued"
+  | "discovering"
+  | "analysing"
+  | "normalizing"
+  | "building_cbom"
+  | "assessing_risk"
+  | "generating_recommendations"
+  | "completed"
+  | "failed";
+
+export interface BackendFinding {
+  artifact_type: string;
+  primitive_type: string | null;
+  algorithm: string | null;
+  variant: string | null;
+  key_size: number | null;
+  library: string | null;
+  library_version: string | null;
+  asset_path: string;
+  line_start: number | null;
+  line_end: number | null;
+  detection_method: string;
+  confidence: number; // 0.0–1.0
+  evidence: string | null;
+  component_id: string | null;
+  parent_component_id: string | null;
+  metadata: Record<string, unknown>;
+}
+
+export interface BackendRecommendationAssessment {
+  direction: string;
+  candidate_algorithms: string[];
+  hybrid_path: string | null;
+  migration_priority: string;
+  rationale: string;
+}
+
+export interface BackendRiskAssessment {
+  classical: Record<string, unknown>;
+  quantum: Record<string, unknown>;
+  mosca: Record<string, unknown>;
+  risk: Record<string, unknown>;
+}
+
+export interface BackendIntelligenceAssessment {
+  finding_index: number;
+  algorithm: string | null;
+  primitive_type: string | null;
+  risk_assessment: BackendRiskAssessment;
+  recommendation: BackendRecommendationAssessment;
+  metadata: Record<string, unknown>;
+}
+
+export interface BackendScanResult {
+  scan_id: string | null;
+  status: BackendScanStatus;
+  target_path: string;
+  findings: BackendFinding[];
+  intelligence: BackendIntelligenceAssessment[];
+  cbom: unknown | null;
+  total_findings: number;
+  started_at: string | null;
+  completed_at: string | null;
+  error: string | null;
+}
+
+export interface BackendScanRequest {
+  source_type: "local" | "git";
+  source?: string | null;
+  target_path?: string | null;
+}
