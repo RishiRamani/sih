@@ -6,4 +6,7 @@ class RecommendationAssessment(BaseModel):
     candidate_algorithms: list[str] = Field(default_factory=list)
     hybrid_path: str | None = None
     migration_priority: str = "NONE"
+    reason: str = ""
     rationale: str = ""
+    effort: str = "UNKNOWN"
+    trade_offs: str = ""

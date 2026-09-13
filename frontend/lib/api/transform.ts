@@ -13,6 +13,8 @@ import type {
   QuantumReadinessSummary,
   RiskDistributionBucket,
   DashboardSummary,
+  CertificateDetails,
+  MigrationEffort,
 } from "@/lib/types";
 import type {
   BackendFinding,
@@ -87,9 +89,13 @@ export function toFinding(
   const classicalStatus = extractClassicalStatus(intel);
   const quantumStatus = extractQuantumStatus(intel);
   const assetType = assetTypeForArtifact(raw.artifact_type);
+  const certificate = raw.artifact_type.toLowerCase() === "certificate"
+    ? toCertificateDetails(raw.metadata)
+    : undefined;
+  const findingId = `${scanId}:${raw.asset_path}:${raw.line_start ?? 0}:${raw.algorithm ?? "unknown"}`;
 
   return {
-    id: `${scanId}:${raw.asset_path}:${raw.line_start ?? 0}:${raw.algorithm ?? "unknown"}`,
+    id: findingId,
     scanId,
     assetType,
     algorithm: raw.algorithm ?? "Unknown",
@@ -117,8 +123,9 @@ export function toFinding(
     riskScore,
     riskExplanation: extractRiskExplanation(intel),
     recommendation: intel?.recommendation
-      ? toRecommendation(intel, scanId, raw.algorithm ?? "Unknown")
+      ? toRecommendation(intel, scanId, raw.algorithm ?? "Unknown", findingId)
       : undefined,
+    certificate,
   };
 }
 
@@ -135,6 +142,25 @@ function assetTypeForArtifact(artifactType: string): AssetInputType {
     default:
       return "SOURCE_REPOSITORY";
   }
+}
+
+function toCertificateDetails(
+  metadata: Record<string, unknown> | undefined
+): CertificateDetails | undefined {
+  if (!metadata) return undefined;
+
+  return {
+    subject: metadata.subject as string | undefined,
+    issuer: metadata.issuer as string | undefined,
+    san: Array.isArray(metadata.san)
+      ? metadata.san.filter((value): value is string => typeof value === "string")
+      : undefined,
+    curve: metadata.curve as string | undefined,
+    signatureAlgorithm: metadata.signature_algorithm as string | undefined,
+    signatureOid: metadata.signature_oid as string | undefined,
+    notValidBefore: metadata.not_valid_before as string | undefined,
+    notValidAfter: metadata.not_valid_after as string | undefined,
+  };
 }
 
 function normalizePrimitive(p: string | null): PrimitiveType {
@@ -249,20 +275,23 @@ function normalizeExposure(s: string | undefined): ExposureStatus {
 export function toRecommendation(
   intel: BackendIntelligenceAssessment,
   scanId: string,
-  algorithmFallback: string
+  algorithmFallback: string,
+  findingId?: string
 ): Recommendation {
   const r = intel.recommendation;
   return {
     id: `rec:${scanId}:${intel.finding_index}`,
-    findingId: `rec:${scanId}:${intel.finding_index}`, // see note below
+    findingId: findingId ?? `rec:${scanId}:${intel.finding_index}`,
     currentTechnology: intel.algorithm ?? algorithmFallback,
     affectedComponents: [r.hybrid_path ?? "application"].filter(Boolean) as string[],
-    reason: r.rationale || "Migration is recommended based on risk assessment.",
+    reason: r.reason || "Migration is recommended based on risk assessment.",
     direction: normalizeDirection(r.direction),
     candidateAlgorithm: r.candidate_algorithms.join(", ") || "See rationale",
     priority: normalizePriority(r.migration_priority),
     status: "NOT_STARTED",
     rationale: r.rationale,
+    effort: normalizeMigrationEffort(r.effort),
+    tradeOffs: r.trade_offs || undefined,
     isExperimental: false,
   };
 }
@@ -270,6 +299,7 @@ export function toRecommendation(
 function normalizeDirection(d: string): MigrationDirection {
   const upper = d.toUpperCase().replace(/[-\s]/g, "_");
   const known: MigrationDirection[] = [
+    "KEM", "SIGNATURE", "HASH", "SYMMETRIC", "MAC", "MANUAL_REVIEW",
     "ML_KEM", "HYBRID_KEM", "ML_DSA", "SLH_DSA", "STRONGER_SYMMETRIC",
     "APPROVED_HASH", "VETTED_STANDARD_REVIEW", "NO_ACTION",
   ];
@@ -280,10 +310,21 @@ function normalizeDirection(d: string): MigrationDirection {
 
 function normalizePriority(p: string): RiskLevel {
   const upper = p.toUpperCase();
+  if (upper === "IMMEDIATE") return "CRITICAL";
+  if (upper === "PLANNED") return "MEDIUM";
+  if (upper === "MONITOR") return "LOW";
   if (upper === "CRITICAL") return "CRITICAL";
   if (upper === "HIGH") return "HIGH";
   if (upper === "MEDIUM") return "MEDIUM";
   return "LOW";
+}
+
+function normalizeMigrationEffort(value: string | undefined): MigrationEffort {
+  const upper = value?.toUpperCase();
+  if (upper === "LOW" || upper === "MEDIUM" || upper === "HIGH" || upper === "UNKNOWN") {
+    return upper;
+  }
+  return "UNKNOWN";
 }
 
 // ------------------------------------------------------------------

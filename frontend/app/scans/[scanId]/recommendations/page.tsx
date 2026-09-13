@@ -11,6 +11,12 @@ import type { Recommendation } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 const DIRECTION_LABEL: Record<string, string> = {
+  KEM: "Post-quantum key establishment",
+  SIGNATURE: "Post-quantum signatures",
+  HASH: "Approved hash construction",
+  SYMMETRIC: "Stronger symmetric cipher",
+  MAC: "Approved MAC construction",
+  MANUAL_REVIEW: "Manual cryptographic review",
   ML_KEM: "ML-KEM key establishment",
   HYBRID_KEM: "Hybrid KEM (classical + PQC)",
   ML_DSA: "ML-DSA signatures",

@@ -98,7 +98,10 @@ def assess_finding(
                 "migration_priority",
                 "NONE",
             ),
+            reason=recommendation.get("reason", ""),
             rationale=recommendation.get("rationale", ""),
+            effort=recommendation.get("effort", "UNKNOWN"),
+            trade_offs=recommendation.get("trade_offs", ""),
         ),
     )
 

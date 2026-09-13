@@ -76,6 +76,12 @@ def generate_recommendation(
     note = rec.get("note")
 
     priority = PRIORITY_BY_SEVERITY.get(severity, "NONE")
+    reason = _migration_reason(
+        algorithm_name,
+        quantum_status,
+        classical_status,
+        priority,
+    )
 
     # Build rationale
     rationale_parts = []
@@ -114,20 +120,104 @@ def generate_recommendation(
     if hybrid:
         rationale_parts.append(f"Hybrid path: {hybrid}.")
 
+    effort, trade_offs = _migration_details(
+        algorithm_name,
+        direction,
+        priority,
+        candidates,
+        hybrid,
+    )
+
     return {
         "direction": direction,
         "candidate_algorithms": candidates,
         "hybrid_path": hybrid,
         "migration_priority": priority,
+        "reason": reason,
         "rationale": " ".join(rationale_parts) or "No rationale available.",
+        "effort": effort,
+        "trade_offs": trade_offs,
     }
 
 
 def _manual_review(reason: str, severity: str) -> dict[str, Any]:
+    priority = PRIORITY_BY_SEVERITY.get(severity, "NONE")
+    summary = reason.split(". ", 1)[0].rstrip(".") + "."
     return {
         "direction": "MANUAL_REVIEW",
         "candidate_algorithms": [],
         "hybrid_path": None,
-        "migration_priority": PRIORITY_BY_SEVERITY.get(severity, "NONE"),
-        "rationale": reason,
+        "migration_priority": priority,
+        "reason": summary,
+        "rationale": (
+            f"{reason} Confirm the intended cryptographic purpose, key or data "
+            "handling, deployment constraints, and compatible replacement before "
+            "implementation."
+        ),
+        "effort": "HIGH",
+        "trade_offs": "Requires manual cryptographic review before selecting a replacement; implementation scope is unknown.",
     }
+
+
+def _migration_reason(
+    algorithm: str,
+    quantum_status: str,
+    classical_status: str,
+    priority: str,
+) -> str:
+    """Build the concise explanation shown before the detailed rationale."""
+    if quantum_status == "BROKEN":
+        return f"{algorithm} is vulnerable to quantum attacks and requires migration."
+    if classical_status == "BROKEN":
+        return f"{algorithm} is classically broken and should be replaced."
+    if classical_status == "WEAK":
+        return f"{algorithm} is below current classical security expectations."
+    if quantum_status == "WEAKENED":
+        return f"{algorithm} has reduced post-quantum security margin."
+    if priority == "NONE":
+        return f"{algorithm} does not currently require migration; retain with standard review."
+    return f"{algorithm} requires planned migration based on the risk assessment."
+
+
+def _migration_details(
+    algorithm: str,
+    direction: str,
+    priority: str,
+    candidates: list[str],
+    hybrid: str | None,
+) -> tuple[str, str]:
+    """Return a consistent implementation estimate for the UI."""
+    if direction == "SYMMETRIC":
+        effort = "LOW" if algorithm in {"AES", "ChaCha20"} else "MEDIUM"
+        trade_offs = (
+            "Increasing key size is usually low impact, but requires key rotation, "
+            "configuration updates, and compatibility testing."
+        )
+    elif direction in {"KEM", "SIGNATURE"}:
+        effort = "HIGH"
+        trade_offs = (
+            "Requires protocol or key-handling changes, interoperability testing, "
+            "and potentially larger keys or signatures."
+        )
+        if hybrid:
+            trade_offs += f" Hybrid deployment preserves classical compatibility but adds {hybrid} coordination."
+    elif direction in {"HASH", "MAC"}:
+        effort = "MEDIUM"
+        trade_offs = (
+            "Requires digest or MAC compatibility review and may invalidate stored "
+            "hashes, signatures, or interoperability assumptions."
+        )
+    else:
+        effort = "HIGH"
+        trade_offs = (
+            "The replacement requires manual review because the detected usage does "
+            "not map cleanly to a standard migration path."
+        )
+
+    if priority == "NONE":
+        effort = "LOW" if direction in {"SYMMETRIC", "HASH", "MAC"} else effort
+
+    if not candidates:
+        trade_offs += " No automated candidate was identified."
+
+    return effort, trade_offs

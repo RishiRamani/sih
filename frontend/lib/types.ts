@@ -109,6 +109,12 @@ export type DataLifetime = "SHORT" | "MEDIUM" | "LONG" | "INDEFINITE";
 export type MigrationEffort = "LOW" | "MEDIUM" | "HIGH" | "UNKNOWN";
 
 export type MigrationDirection =
+  | "KEM"
+  | "SIGNATURE"
+  | "HASH"
+  | "SYMMETRIC"
+  | "MAC"
+  | "MANUAL_REVIEW"
   | "ML_KEM"
   | "HYBRID_KEM"
   | "ML_DSA"
@@ -165,10 +171,22 @@ export interface Finding {
   riskScore: number; // 0-100, backend-computed
   riskExplanation?: string;
   recommendation?: Recommendation;
+  certificate?: CertificateDetails;
   isAssumption?: {
     dataLifetime?: boolean;
     businessCriticality?: boolean;
   };
+}
+
+export interface CertificateDetails {
+  subject?: string;
+  issuer?: string;
+  san?: string[];
+  curve?: string;
+  signatureAlgorithm?: string;
+  signatureOid?: string;
+  notValidBefore?: string;
+  notValidAfter?: string;
 }
 
 export interface CbomComponent {
@@ -247,7 +265,10 @@ export interface BackendRecommendationAssessment {
   candidate_algorithms: string[];
   hybrid_path: string | null;
   migration_priority: string;
+  reason?: string;
   rationale: string;
+  effort?: string;
+  trade_offs?: string;
 }
 
 export interface BackendRiskAssessment {

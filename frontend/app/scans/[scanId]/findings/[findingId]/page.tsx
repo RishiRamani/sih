@@ -126,6 +126,29 @@ export default function FindingDetailPage({
               </dl>
             </Card>
 
+            {finding.certificate ? (
+              <Card title="Certificate details" bodyClassName="px-5 py-5">
+                <dl className="grid grid-cols-1 gap-x-5 gap-y-4 sm:grid-cols-2">
+                  <Field label="Subject">{finding.certificate.subject ?? "—"}</Field>
+                  <Field label="Issuer">{finding.certificate.issuer ?? "—"}</Field>
+                  <Field label="Signature algorithm">
+                    {finding.certificate.signatureAlgorithm ?? "—"}
+                  </Field>
+                  <Field label="Signature OID">
+                    {finding.certificate.signatureOid ?? "—"}
+                  </Field>
+                  <Field label="Curve">{finding.certificate.curve ?? "—"}</Field>
+                  <Field label="SANs">{finding.certificate.san?.join(", ") || "—"}</Field>
+                  <Field label="Valid from">
+                    {finding.certificate.notValidBefore ?? "—"}
+                  </Field>
+                  <Field label="Valid until">
+                    {finding.certificate.notValidAfter ?? "—"}
+                  </Field>
+                </dl>
+              </Card>
+            ) : null}
+
             {/* Detection */}
             <Card
               title="Where & how it was detected"

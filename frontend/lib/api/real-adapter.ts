@@ -230,9 +230,13 @@ export class RealApiAdapter implements ApiClient {
     const raw = await this.ensureScanLoaded(scanId);
     return raw.intelligence
       .filter((i) => i.recommendation && i.recommendation.direction !== "NONE")
-      .map((i) =>
-        toRecommendation(i, scanId, i.algorithm ?? "Unknown")
-      );
+      .map((i) => {
+        const finding = raw.findings[i.finding_index];
+        const findingId = finding
+          ? `${scanId}:${finding.asset_path}:${finding.line_start ?? 0}:${finding.algorithm ?? "unknown"}`
+          : undefined;
+        return toRecommendation(i, scanId, i.algorithm ?? "Unknown", findingId);
+      });
   }
 
   async updateRecommendationStatus(
