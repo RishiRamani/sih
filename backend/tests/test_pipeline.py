@@ -38,3 +38,18 @@ def test_pipeline():
     assert len(result.findings) == 1
     assert result.findings[0].algorithm == "RSA"
     assert result.findings[0].key_size == 2048
+
+
+def test_pipeline_makes_absolute_finding_paths_relative(tmp_path):
+    target = tmp_path / "repo"
+    target.mkdir()
+
+    class AbsolutePathScanner(FakeScanner):
+        def scan(self, target: Path) -> list[Finding]:
+            findings = super().scan(target)
+            findings[0].asset_path = str(target / "src" / "crypto.py")
+            return findings
+
+    result = ScanPipeline([AbsolutePathScanner()]).run(target)
+
+    assert result.findings[0].asset_path == "src/crypto.py"

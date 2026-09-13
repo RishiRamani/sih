@@ -8,6 +8,23 @@ from ..scanners.base import BaseScanner
 from ..intelligence.evaluator import assess_findings
 
 
+def _make_finding_paths_relative(findings: list[Finding], target: Path) -> None:
+    """Remove the local acquisition root from filesystem finding paths."""
+    root = target.resolve()
+
+    for finding in findings:
+        path = Path(finding.asset_path)
+        if not path.is_absolute():
+            continue
+
+        try:
+            finding.asset_path = path.resolve().relative_to(root).as_posix()
+        except ValueError:
+            # Some scanners report paths from another namespace, such as a
+            # path inside a container archive. Preserve those paths.
+            continue
+
+
 class ScanPipeline:
     """
     Coordinates scanner execution and normalization.
@@ -37,6 +54,7 @@ class ScanPipeline:
                     f"{type(exc).__name__}: {exc}"
                 )
 
+        _make_finding_paths_relative(raw_findings, target)
         findings = normalize_findings(raw_findings)
 
         intelligence = assess_findings(findings)

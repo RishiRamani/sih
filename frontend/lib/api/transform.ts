@@ -146,6 +146,8 @@ function normalizePrimitive(p: string | null): PrimitiveType {
   ];
   if (known.includes(upper as PrimitiveType)) return upper as PrimitiveType;
   // Map freeform strings
+  if (upper === "SYMMETRIC") return "SYMMETRIC_CIPHER";
+  if (upper === "ASYMMETRIC") return "ASYMMETRIC_CIPHER";
   if (upper.includes("SIGN")) return "DIGITAL_SIGNATURE";
   if (upper.includes("KEY_EST") || upper.includes("KEY_EXCH")) return "KEY_EXCHANGE";
   if (upper.includes("HASH")) return "HASH";
