@@ -41,6 +41,10 @@ const STATUS_STYLE: Record<Recommendation["status"], string> = {
   ACCEPTED_RISK: "bg-amber/10 text-amber border-amber/30"
 };
 
+function effortLabel(effort: Recommendation["effort"]): string {
+  return effort === "UNKNOWN" || !effort ? "Not assessed" : effort;
+}
+
 export default function RecommendationsPage({ params }: { params: { scanId: string } }) {
   const { scanId } = params;
   const [items, setItems] = useState<Recommendation[]>([]);
@@ -135,14 +139,14 @@ export default function RecommendationsPage({ params }: { params: { scanId: stri
                 <div>
                   <div className="text-xs font-medium text-text-secondary">Effort / trade-offs</div>
                   <p className="mt-0.5 text-sm text-text-primary">
-                    {rec.effort ?? "Unknown"}
+                    {effortLabel(rec.effort)}
                     {rec.tradeOffs ? ` — ${rec.tradeOffs}` : ""}
                   </p>
                 </div>
               </div>
 
               <Link
-                href={`/scans/${scanId}/findings/${rec.findingId}`}
+                href={`/scans/${scanId}/findings/${encodeURIComponent(rec.findingId)}`}
                 className="mt-3 inline-block text-xs font-medium text-accent hover:underline"
               >
                 View underlying finding →

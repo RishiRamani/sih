@@ -142,7 +142,7 @@ export default function CbomPage({ params }: { params: { scanId: string } }) {
             </div>
             <Button
               variant="secondary"
-              onClick={() => router.push(`/scans/${scanId}/recommendations`)}
+              onClick={() => window.open(`${process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000"}/scans/${scanId}/report?format=html`, "_blank", "noopener,noreferrer")}
             >
               <Download size={14} />
               Export report
@@ -154,7 +154,7 @@ export default function CbomPage({ params }: { params: { scanId: string } }) {
               columns={columns}
               rows={pageItems}
               keyExtractor={(f) => f.id}
-              onRowClick={(f) => router.push(`/scans/${scanId}/findings/${f.id}`)}
+              onRowClick={(f) => router.push(`/scans/${scanId}/findings/${encodeURIComponent(f.id)}`)}
               page={page}
               pageSize={PAGE_SIZE}
               total={data.findings.length}

@@ -215,8 +215,10 @@ export default function FindingDetailPage({
                 </Field>
                 <Field label="Data lifetime">
                   <span className="flex items-center gap-1.5">
-                    {finding.dataLifetime && finding.dataLifetime !== "Unknown" ? (
-                      finding.dataLifetime
+                    {finding.dataLifetime !== undefined && finding.dataLifetime !== "Unknown" ? (
+                      typeof finding.dataLifetime === "number"
+                        ? `${finding.dataLifetime} years`
+                        : finding.dataLifetime
                     ) : (
                       <UnknownValue />
                     )}

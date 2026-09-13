@@ -47,6 +47,7 @@ export interface ScanCoverage {
   filesScanned: number;
   filesTotal: number;
   unsupportedFiles: number;
+  skippedFiles: number;
   parseErrors: number;
   warnings: ScanWarning[];
 }
@@ -65,6 +66,9 @@ export interface Scan {
   findingCount?: number;
   highRiskCount?: number;
   coverage?: ScanCoverage;
+  businessCriticality?: BusinessCriticality;
+  dataLifetimeYears?: number;
+  migrationTimeYears?: number;
   errorMessage?: string;
 }
 
@@ -164,7 +168,7 @@ export interface Finding {
   confidence: Confidence;
   classicalStatus: ExposureStatus;
   quantumStatus: ExposureStatus;
-  dataLifetime?: DataLifetime | "Unknown";
+  dataLifetime?: DataLifetime | number | "Unknown";
   businessCriticality?: BusinessCriticality | "Unknown";
   migrationTime?: MigrationEffort;
   riskLevel: RiskLevel;
@@ -202,6 +206,7 @@ export interface RiskDistributionBucket {
 
 export interface QuantumReadinessSummary {
   crqcScenario: string; // e.g. "NIST-aligned conservative: CRQC by 2033"
+  criticalCount: number;
   classicalExposure: RiskDistributionBucket[];
   quantumExposure: RiskDistributionBucket[];
   prioritizedFindingIds: string[];
@@ -213,11 +218,19 @@ export interface DashboardSummary {
   certificates: number;
   libraries: number;
   highRisk: number;
+  criticalRisk: number;
   quantumRisk: number;
   riskDistribution: RiskDistributionBucket[];
   topRiskyComponents: { name: string; occurrences: number; riskLevel: RiskLevel }[];
   recentScans: Scan[];
-  coverageSummary: { scansCompleted: number; filesScanned: number; unsupportedFiles: number };
+  coverageSummary: {
+    scansCompleted: number;
+    filesScanned: number;
+    unsupportedFiles: number;
+    skippedFiles: number;
+    parseErrors: number;
+    warnings: number;
+  };
 }
 
 export interface NewScanInput {
@@ -225,6 +238,10 @@ export interface NewScanInput {
   inputType: AssetInputType;
   sourceLabel: string;
   fileName?: string;
+  businessCriticality?: BusinessCriticality;
+  dataLifetimeYears?: number;
+  migrationTimeYears?: number;
+  crqcArrivalYears?: number;
 }
 
 // === Real backend types (from openapi.json) ===
@@ -302,11 +319,24 @@ export interface BackendScanResult {
   data_lifetime_years?: number;
   migration_time_years?: number;
   crqc_arrival_years?: number | null;
-  coverage?: ScanCoverage;
+  coverage?: BackendScanCoverage;
 }
 
 export interface BackendScanRequest {
   source_type: "local" | "git";
   source?: string | null;
   target_path?: string | null;
+  business_criticality?: BusinessCriticality;
+  data_lifetime_years?: number;
+  migration_time_years?: number;
+  crqc_arrival_years?: number | null;
+}
+
+export interface BackendScanCoverage {
+  files_scanned: number;
+  files_total: number;
+  unsupported_files: number;
+  skipped_files: number;
+  parse_errors: number;
+  warnings: { code: string; message: string; path?: string | null }[];
 }

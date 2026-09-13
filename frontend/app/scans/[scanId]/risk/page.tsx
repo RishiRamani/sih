@@ -64,6 +64,15 @@ export default function RiskPage({ params }: { params: { scanId: string } }) {
             </p>
           </Card>
 
+          <Card title="Critical findings">
+            <div className="font-mono-tabular text-2xl font-medium text-text-primary">
+              {summary.criticalCount ?? 0}
+            </div>
+            <p className="mt-1 text-xs text-text-secondary">
+              Matches the CRITICAL slice in the risk distribution and prioritized finding list.
+            </p>
+          </Card>
+
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             <Card
               title="Classical exposure"

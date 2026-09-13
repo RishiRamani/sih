@@ -80,6 +80,11 @@ export class RealApiAdapter implements ApiClient {
     return raw.map(toScan);
   }
 
+  async deleteScan(scanId: string): Promise<void> {
+    await request(`/scans/${encodeURIComponent(scanId)}`, { method: "DELETE" });
+    this.scanCache.delete(scanId);
+  }
+
   async createScan(input: NewScanInput): Promise<Scan> {
     // Backend: { source_type: "local"|"git", source, target_path }
     // Frontend sends { name, inputType, sourceLabel }
@@ -90,6 +95,13 @@ export class RealApiAdapter implements ApiClient {
     const body = isGit
       ? { source_type: "git", source: input.sourceLabel }
       : { source_type: "local", target_path: input.sourceLabel };
+
+    Object.assign(body, {
+      business_criticality: input.businessCriticality ?? "MEDIUM",
+      data_lifetime_years: input.dataLifetimeYears ?? 3,
+      migration_time_years: input.migrationTimeYears ?? 2,
+      crqc_arrival_years: input.crqcArrivalYears,
+    });
 
     const raw = await request<BackendScanResult>("/scans", {
       method: "POST",
@@ -124,7 +136,7 @@ export class RealApiAdapter implements ApiClient {
   async getFindings(scanId: string, query: FindingsQuery = {}): Promise<FindingsResponse> {
     let raw = await this.ensureScanLoaded(scanId);
     let findings = raw.findings.map((f, idx) =>
-      toFinding(f, findIntelForFinding(raw.intelligence, idx, f), scanId)
+      toFinding(f, findIntelForFinding(raw.intelligence, idx, f), scanId, raw)
     );
 
     // Apply filtering client-side (backend has no query params)

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { PlusCircle, AlertCircle } from "lucide-react";
+import { PlusCircle, AlertCircle, Trash2 } from "lucide-react";
 import { AppShell } from "@/components/layout/AppShell";
 import { Card } from "@/components/ui/Card";
 import { buttonClasses } from "@/components/ui/Button";
@@ -13,15 +13,14 @@ import type { Scan } from "@/lib/types";
 import { formatDate, formatDuration, INPUT_TYPE_LABEL } from "@/lib/utils";
 
 function destinationFor(scan: Scan): string {
-  return scan.status === "COMPLETED"
-    ? `/scans/${scan.id}/findings`
-    : `/scans/${scan.id}/progress`;
+  return `/scans/${scan.id}/progress`;
 }
 
 export default function ScansPage() {
   const [scans, setScans] = useState<Scan[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   function load() {
     setLoading(true);
@@ -34,6 +33,19 @@ export default function ScansPage() {
   }
 
   useEffect(load, []);
+
+  async function handleDelete(scan: Scan) {
+    if (!window.confirm(`Delete scan "${scan.name}"? This cannot be undone.`)) return;
+    setDeletingId(scan.id);
+    try {
+      await api.deleteScan(scan.id);
+      setScans((current) => current?.filter((item) => item.id !== scan.id) ?? current);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to delete scan.");
+    } finally {
+      setDeletingId(null);
+    }
+  }
 
   return (
     <AppShell title="Scans">
@@ -71,7 +83,7 @@ export default function ScansPage() {
       {!loading && !error && scans && scans.length > 0 ? (
         <Card bodyClassName="p-0">
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[860px] border-collapse text-sm">
+            <table className="w-full min-w-[920px] border-collapse text-sm">
               <thead className="bg-elevated">
                 <tr>
                   <th className="border-b border-border px-4 py-2.5 text-left text-[10px] font-semibold uppercase tracking-[0.11em] text-text-secondary">
@@ -91,6 +103,9 @@ export default function ScansPage() {
                   </th>
                   <th className="border-b border-border px-4 py-2.5 text-left text-[10px] font-semibold uppercase tracking-[0.11em] text-text-secondary">
                     Created
+                  </th>
+                  <th className="border-b border-border px-4 py-2.5 text-right text-[10px] font-semibold uppercase tracking-[0.11em] text-text-secondary">
+                    Actions
                   </th>
                 </tr>
               </thead>
@@ -137,6 +152,18 @@ export default function ScansPage() {
                     </td>
                     <td className="px-4 py-3 text-text-secondary">
                       {formatDate(scan.createdAt)}
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      <button
+                        type="button"
+                        title="Delete scan"
+                        aria-label={`Delete scan ${scan.name}`}
+                        disabled={deletingId === scan.id}
+                        onClick={() => handleDelete(scan)}
+                        className="inline-flex items-center justify-center rounded p-1.5 text-text-secondary transition-colors hover:bg-crimson/10 hover:text-crimson disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        <Trash2 size={15} />
+                      </button>
                     </td>
                   </tr>
                 ))}

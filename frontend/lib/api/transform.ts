@@ -20,6 +20,7 @@ import type {
   BackendFinding,
   BackendIntelligenceAssessment,
   BackendScanResult,
+  BackendScanCoverage,
 } from "@/lib/types";
 
 // ------------------------------------------------------------------
@@ -29,6 +30,21 @@ import type {
 export function toScan(raw: BackendScanResult): Scan {
   const inputType: AssetInputType = inferInputType(raw.target_path);
   const status = normalizeStatus(raw.status);
+  const backendCoverage = raw.coverage as BackendScanCoverage | undefined;
+  const coverage = backendCoverage
+    ? {
+        filesScanned: backendCoverage.files_scanned,
+        filesTotal: backendCoverage.files_total,
+        unsupportedFiles: backendCoverage.unsupported_files,
+        skippedFiles: backendCoverage.skipped_files,
+        parseErrors: backendCoverage.parse_errors,
+        warnings: backendCoverage.warnings.map((warning) => ({
+          code: warning.code,
+          message: warning.message,
+          path: warning.path ?? undefined,
+        })),
+      }
+    : undefined;
 
   return {
     id: raw.scan_id ?? raw.target_path,
@@ -45,7 +61,10 @@ export function toScan(raw: BackendScanResult): Scan {
       (i) => extractRiskLevel(i) === "HIGH" || extractRiskLevel(i) === "CRITICAL"
     ).length,
     errorMessage: raw.error ?? undefined,
-    coverage: raw.coverage,
+    coverage,
+    businessCriticality: raw.business_criticality as Scan["businessCriticality"],
+    dataLifetimeYears: raw.data_lifetime_years,
+    migrationTimeYears: raw.migration_time_years,
   };
 }
 
@@ -83,7 +102,8 @@ function normalizeStatus(raw: string): ScanStatus {
 export function toFinding(
   raw: BackendFinding,
   intel: BackendIntelligenceAssessment | undefined,
-  scanId: string
+  scanId: string,
+  context?: Pick<BackendScanResult, "target_path" | "business_criticality" | "data_lifetime_years">
 ): Finding {
   const risk = extractRiskLevel(intel);
   const riskScore = extractRiskScore(intel);
@@ -101,14 +121,16 @@ export function toFinding(
     assetType,
     algorithm: raw.algorithm ?? "Unknown",
     variant: raw.variant ?? undefined,
-    primitiveType: normalizePrimitive(raw.primitive_type),
+    primitiveType: raw.artifact_type.toLowerCase() === "certificate"
+      ? "CERTIFICATE"
+      : normalizePrimitive(raw.primitive_type),
     keySize: raw.key_size ?? "Unknown",
     mode: extractFromMetadata(raw.metadata, "mode"),
     parameterSet: extractFromMetadata(raw.metadata, "parameter_set"),
     library: raw.library ?? undefined,
     libraryVersion: raw.library_version ?? undefined,
     protocol: extractFromMetadata(raw.metadata, "protocol"),
-    sourcePath: raw.asset_path,
+    sourcePath: relativeAssetPath(raw.asset_path, context?.target_path),
     lineStart: raw.line_start ?? undefined,
     lineEnd: raw.line_end ?? undefined,
     inputType: assetType,
@@ -117,9 +139,9 @@ export function toFinding(
     confidence: normalizeConfidence(raw.confidence),
     classicalStatus,
     quantumStatus,
-    dataLifetime: extractFromMetadata(raw.metadata, "data_lifetime") as Finding["dataLifetime"],
-    businessCriticality: extractFromMetadata(raw.metadata, "business_criticality") as Finding["businessCriticality"],
-    migrationTime: "UNKNOWN",
+    dataLifetime: context?.data_lifetime_years ?? extractFromMetadata(raw.metadata, "data_lifetime") as Finding["dataLifetime"] ?? 3,
+    businessCriticality: normalizeBusinessCriticality(context?.business_criticality ?? extractFromMetadata(raw.metadata, "business_criticality")) ?? "MEDIUM",
+    migrationTime: normalizeMigrationEffort(intel?.recommendation?.effort),
     riskLevel: risk,
     riskScore,
     riskExplanation: extractRiskExplanation(intel),
@@ -185,6 +207,7 @@ function normalizePrimitive(p: string | null): PrimitiveType {
 
 function normalizeDetection(d: string): DetectionMethod {
   const upper = d.toUpperCase().replace(/[-\s]/g, "_");
+  if (upper === "X509_CERTIFICATE" || upper === "CERTIFICATE") return "CERTIFICATE_PARSE";
   const known: DetectionMethod[] = [
     "STATIC_AST", "API_CALL_SIGNATURE", "CONFIG_FILE", "CERTIFICATE_PARSE",
     "DEPENDENCY_MANIFEST", "BINARY_SYMBOL", "HEURISTIC_STRING_MATCH", "TLS_HANDSHAKE_METADATA",
@@ -351,6 +374,7 @@ export function toQuantumReadinessSummary(
   return {
     crqcScenario:
       "Backend-supplied CRQC scenario — see individual risk assessments for reasoning",
+    criticalCount: findings.filter((f) => f.riskLevel === "CRITICAL").length,
     classicalExposure,
     quantumExposure,
     prioritizedFindingIds: prioritized,
@@ -395,6 +419,7 @@ export function computeDashboardSummary(
     certificates: certs.length,
     libraries: libraries.size,
     highRisk: allFindings.filter((f) => f.riskLevel === "HIGH" || f.riskLevel === "CRITICAL").length,
+    criticalRisk: allFindings.filter((f) => f.riskLevel === "CRITICAL").length,
     quantumRisk: allFindings.filter((f) => f.quantumStatus === "BROKEN" || f.quantumStatus === "WEAK").length,
     riskDistribution: distribution(allFindings),
     topRiskyComponents: Array.from(componentCounts.entries())
@@ -406,6 +431,9 @@ export function computeDashboardSummary(
       scansCompleted: scans.filter((s) => s.status === "COMPLETED").length,
       filesScanned: scans.reduce((sum, scan) => sum + (scan.coverage?.filesScanned ?? 0), 0),
       unsupportedFiles: scans.reduce((sum, scan) => sum + (scan.coverage?.unsupportedFiles ?? 0), 0),
+      skippedFiles: scans.reduce((sum, scan) => sum + (scan.coverage?.skippedFiles ?? 0), 0),
+      parseErrors: scans.reduce((sum, scan) => sum + (scan.coverage?.parseErrors ?? 0), 0),
+      warnings: scans.reduce((sum, scan) => sum + (scan.coverage?.warnings.length ?? 0), 0),
     },
   };
 }
@@ -416,4 +444,22 @@ function normalizeRecommendationStatus(value: string | undefined): Recommendatio
     return status;
   }
   return "NOT_STARTED";
+}
+
+function relativeAssetPath(assetPath: string, targetPath?: string): string {
+  if (!targetPath) return assetPath;
+  const asset = assetPath.replace(/\\/g, "/");
+  const target = targetPath.replace(/\\/g, "/").replace(/\/+$/, "");
+  const assetLower = asset.toLowerCase();
+  const targetLower = target.toLowerCase();
+  if (assetLower === targetLower) return asset.split("/").pop() ?? asset;
+  if (assetLower.startsWith(`${targetLower}/`)) return asset.slice(target.length + 1);
+  return asset;
+}
+
+function normalizeBusinessCriticality(value: unknown): Finding["businessCriticality"] {
+  const normalized = String(value ?? "").toUpperCase();
+  return ["LOW", "MEDIUM", "HIGH", "CRITICAL"].includes(normalized)
+    ? normalized as Finding["businessCriticality"]
+    : undefined;
 }

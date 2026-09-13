@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { Search } from "lucide-react";
+import { Download } from "lucide-react";
 import { AppShell } from "@/components/layout/AppShell";
 import { ScanTabs } from "@/components/layout/ScanTabs";
 import { Card } from "@/components/ui/Card";
@@ -116,6 +117,16 @@ export default function FindingsPage({ params }: { params: { scanId: string } })
     <AppShell title="Scan results">
       <ScanTabs scanId={scanId} />
 
+      <div className="mb-4 flex justify-end">
+        <a
+          href={`${process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000"}/scans/${scanId}/report?format=html`}
+          download={`ecdat-${scanId}.html`}
+          className="inline-flex items-center gap-2 rounded border border-border bg-surface px-3 py-2 text-xs font-medium text-text-primary hover:border-accent hover:text-accent"
+        >
+          <Download size={14} /> Download report
+        </a>
+      </div>
+
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <div className="relative">
           <Search size={14} className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-text-secondary" />
@@ -165,9 +176,10 @@ export default function FindingsPage({ params }: { params: { scanId: string } })
         <>
           {scan?.coverage ? (
             <Card className="mb-4" title="Scan coverage">
-              <div className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
+              <div className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-5">
                 <div><div className="text-xs text-text-secondary">Files scanned</div><div className="font-mono-tabular text-lg text-text-primary">{scan.coverage.filesScanned} / {scan.coverage.filesTotal}</div></div>
                 <div><div className="text-xs text-text-secondary">Unsupported</div><div className="font-mono-tabular text-lg text-amber">{scan.coverage.unsupportedFiles}</div></div>
+                <div><div className="text-xs text-text-secondary">Skipped</div><div className="font-mono-tabular text-lg text-text-secondary">{scan.coverage.skippedFiles}</div></div>
                 <div><div className="text-xs text-text-secondary">Parse errors</div><div className="font-mono-tabular text-lg text-danger">{scan.coverage.parseErrors}</div></div>
                 <div><div className="text-xs text-text-secondary">Warnings</div><div className="font-mono-tabular text-lg text-text-primary">{scan.coverage.warnings.length}</div></div>
               </div>

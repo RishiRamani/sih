@@ -39,6 +39,9 @@ export default function NewScanPage() {
   const [inputType, setInputType] = useState<AssetInputType>("SOURCE_REPOSITORY");
   const [name, setName] = useState("");
   const [sourceLabel, setSourceLabel] = useState("");
+  const [businessCriticality, setBusinessCriticality] = useState<"LOW" | "MEDIUM" | "HIGH" | "CRITICAL">("MEDIUM");
+  const [dataLifetimeYears, setDataLifetimeYears] = useState(3);
+  const [crqcArrivalYears, setCrqcArrivalYears] = useState(12);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -58,6 +61,9 @@ export default function NewScanPage() {
         name: name.trim(),
         inputType,
         sourceLabel: sourceLabel.trim(),
+        businessCriticality,
+        dataLifetimeYears,
+        crqcArrivalYears,
       });
       toast({
         tone: "success",
@@ -112,6 +118,29 @@ export default function NewScanPage() {
               ))}
             </div>
             <p className="mt-3 text-xs text-text-secondary">{selected.description}</p>
+          </Card>
+
+          <Card title="Risk context">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <label className="text-[10px] font-semibold uppercase tracking-[0.11em] text-text-secondary">
+                Business criticality
+                <select value={businessCriticality} onChange={(e) => setBusinessCriticality(e.target.value as typeof businessCriticality)} className="mt-1.5 w-full rounded border border-border bg-elevated px-3 py-2 text-sm font-normal normal-case tracking-normal text-text-primary focus:border-accent focus:outline-none">
+                  <option value="LOW">Low</option>
+                  <option value="MEDIUM">Medium</option>
+                  <option value="HIGH">High</option>
+                  <option value="CRITICAL">Critical</option>
+                </select>
+              </label>
+              <label className="text-[10px] font-semibold uppercase tracking-[0.11em] text-text-secondary">
+                Data lifetime (years)
+                <input type="number" min="0" step="1" value={dataLifetimeYears} onChange={(e) => setDataLifetimeYears(Number(e.target.value))} className="mt-1.5 w-full rounded border border-border bg-elevated px-3 py-2 text-sm font-normal tracking-normal text-text-primary focus:border-accent focus:outline-none" />
+              </label>
+              <label className="text-[10px] font-semibold uppercase tracking-[0.11em] text-text-secondary">
+                Expected quantum computer (years)
+                <input type="number" min="0" step="1" value={crqcArrivalYears} onChange={(e) => setCrqcArrivalYears(Number(e.target.value))} className="mt-1.5 w-full rounded border border-border bg-elevated px-3 py-2 text-sm font-normal tracking-normal text-text-primary focus:border-accent focus:outline-none" />
+              </label>
+            </div>
+            <p className="mt-3 text-xs text-text-secondary">These values feed Mosca timing risk and are stored with the scan assessment.</p>
           </Card>
 
           <Card title="Scan details">

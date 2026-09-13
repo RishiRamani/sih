@@ -18,6 +18,7 @@ export const MOCK_SCANS: Scan[] = [
       filesScanned: 1284,
       filesTotal: 1310,
       unsupportedFiles: 26,
+      skippedFiles: 0,
       parseErrors: 3,
       warnings: [
         { code: "UNSUPPORTED_EXT", message: "26 files with unsupported extensions were skipped." },
@@ -39,6 +40,7 @@ export const MOCK_SCANS: Scan[] = [
       filesScanned: 640,
       filesTotal: 900,
       unsupportedFiles: 4,
+      skippedFiles: 0,
       parseErrors: 0,
       warnings: []
     }
@@ -59,6 +61,7 @@ export const MOCK_SCANS: Scan[] = [
       filesScanned: 12,
       filesTotal: 58,
       unsupportedFiles: 40,
+      skippedFiles: 0,
       parseErrors: 6,
       warnings: [{ code: "OBFUSCATED_BINARY", message: "Class files appear obfuscated; static analysis coverage is limited." }]
     }
@@ -76,7 +79,7 @@ export const MOCK_SCANS: Scan[] = [
     requestedBy: "a.iyer",
     findingCount: 18,
     highRiskCount: 2,
-    coverage: { filesScanned: 18, filesTotal: 18, unsupportedFiles: 0, parseErrors: 0, warnings: [] }
+    coverage: { filesScanned: 18, filesTotal: 18, unsupportedFiles: 0, skippedFiles: 0, parseErrors: 0, warnings: [] }
   },
   {
     id: "scan_e551",

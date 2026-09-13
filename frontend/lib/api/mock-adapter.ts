@@ -74,6 +74,7 @@ export class MockApiAdapter implements ApiClient {
       certificates: certs,
       libraries: libraries.size,
       highRisk: completedFindings.filter((f) => f.riskLevel === "HIGH" || f.riskLevel === "CRITICAL").length,
+      criticalRisk: completedFindings.filter((f) => f.riskLevel === "CRITICAL").length,
       quantumRisk: completedFindings.filter((f) => f.quantumStatus === "BROKEN" || f.quantumStatus === "WEAK").length,
       riskDistribution: riskDistribution(completedFindings),
       topRiskyComponents,
@@ -81,7 +82,10 @@ export class MockApiAdapter implements ApiClient {
       coverageSummary: {
         scansCompleted: scans.filter((s) => s.status === "COMPLETED").length,
         filesScanned: scans.reduce((sum, s) => sum + (s.coverage?.filesScanned ?? 0), 0),
-        unsupportedFiles: scans.reduce((sum, s) => sum + (s.coverage?.unsupportedFiles ?? 0), 0)
+        unsupportedFiles: scans.reduce((sum, s) => sum + (s.coverage?.unsupportedFiles ?? 0), 0),
+        skippedFiles: scans.reduce((sum, s) => sum + (s.coverage?.skippedFiles ?? 0), 0),
+        parseErrors: scans.reduce((sum, s) => sum + (s.coverage?.parseErrors ?? 0), 0),
+        warnings: scans.reduce((sum, s) => sum + (s.coverage?.warnings.length ?? 0), 0)
       }
     };
   }
@@ -89,6 +93,13 @@ export class MockApiAdapter implements ApiClient {
   async listScans(): Promise<Scan[]> {
     await delay();
     return [...scans].sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
+  }
+
+  async deleteScan(scanId: string): Promise<void> {
+    await delay(200);
+    const before = scans.length;
+    scans = scans.filter((scan) => scan.id !== scanId);
+    if (scans.length === before) throw new ApiError(`Scan ${scanId} was not found.`, 404);
   }
 
   async createScan(input: NewScanInput): Promise<Scan> {
@@ -229,6 +240,7 @@ export class MockApiAdapter implements ApiClient {
 
     return {
       crqcScenario: "NIST-aligned conservative scenario: cryptographically relevant quantum computer by ~2033",
+      criticalCount: scanFindings.filter((f) => f.riskLevel === "CRITICAL").length,
       classicalExposure,
       quantumExposure,
       prioritizedFindingIds: prioritized

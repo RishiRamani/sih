@@ -64,12 +64,13 @@ export default function DashboardPage() {
 
       {!loading && !error && data ? (
         <div className="space-y-6">
-          <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-7">
             <StatCard label="Crypto assets" value={data.cryptoAssets} icon={KeyRound} />
             <StatCard label="Algorithms" value={data.algorithms} icon={Binary} />
             <StatCard label="Certificates" value={data.certificates} icon={BadgeCheck} />
             <StatCard label="Libraries" value={data.libraries} icon={Library} />
             <StatCard label="High risk" value={data.highRisk} icon={AlertTriangle} tone="crimson" />
+            <StatCard label="Critical" value={data.criticalRisk} icon={AlertTriangle} tone="crimson" />
             <StatCard label="Quantum risk" value={data.quantumRisk} icon={Atom} tone="amber" />
           </div>
 
@@ -83,24 +84,42 @@ export default function DashboardPage() {
                 <div className="flex items-center justify-between">
                   <dt className="text-text-secondary">Scans completed</dt>
                   <dd className="font-mono-tabular text-base font-medium text-text-primary">
-                    {data.coverageSummary.scansCompleted}
+                    {data.coverageSummary.scansCompleted ?? 0}
                   </dd>
                 </div>
                 <div className="flex items-center justify-between">
                   <dt className="text-text-secondary">Files scanned</dt>
                   <dd className="font-mono-tabular text-base font-medium text-text-primary">
-                    {data.coverageSummary.filesScanned}
+                    {data.coverageSummary.filesScanned ?? 0}
                   </dd>
                 </div>
                 <div className="flex items-center justify-between">
                   <dt className="text-text-secondary">Unsupported files</dt>
-                  <dd className="font-mono-tabular text-base font-medium text-amber">
-                    {data.coverageSummary.unsupportedFiles}
+                  <dd className="font-mono-tabular text-base font-medium text-text-primary">
+                    {data.coverageSummary.unsupportedFiles ?? 0}
+                  </dd>
+                </div>
+                <div className="flex items-center justify-between">
+                  <dt className="text-text-secondary">Skipped files</dt>
+                  <dd className="font-mono-tabular text-base font-medium text-text-primary">
+                    {data.coverageSummary.skippedFiles ?? 0}
+                  </dd>
+                </div>
+                <div className="flex items-center justify-between">
+                  <dt className="text-text-secondary">Parse errors</dt>
+                  <dd className="font-mono-tabular text-base font-medium text-text-primary">
+                    {data.coverageSummary.parseErrors ?? 0}
+                  </dd>
+                </div>
+                <div className="flex items-center justify-between">
+                  <dt className="text-text-secondary">Scanner warnings</dt>
+                  <dd className="font-mono-tabular text-base font-medium text-text-primary">
+                    {data.coverageSummary.warnings ?? 0}
                   </dd>
                 </div>
               </dl>
-              <div className="mt-4 flex items-start gap-2 rounded border border-amber/30 bg-amber/8 p-2.5 text-xs leading-relaxed text-text-secondary">
-                <FileWarning size={13} className="mt-0.5 shrink-0 text-amber" />
+              <div className="mt-4 flex items-start gap-2 rounded border border-border bg-elevated p-2.5 text-xs leading-relaxed text-text-secondary">
+                <FileWarning size={13} className="mt-0.5 shrink-0 text-text-secondary" />
                 A completed scan does not guarantee all cryptography was discovered. Unsupported and unparsed files are excluded from analysis.
               </div>
             </Card>
