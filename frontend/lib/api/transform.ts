@@ -426,7 +426,7 @@ export function computeDashboardSummary(
       .map(([name, v]) => ({ name, occurrences: v.count, riskLevel: v.risk }))
       .sort((a, b) => b.occurrences - a.occurrences)
       .slice(0, 6),
-    recentScans: [...scans].sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1)).slice(0, 5),
+    recentScans: scans.slice(0, 5),
     coverageSummary: {
       scansCompleted: scans.filter((s) => s.status === "COMPLETED").length,
       filesScanned: scans.reduce((sum, scan) => sum + (scan.coverage?.filesScanned ?? 0), 0),

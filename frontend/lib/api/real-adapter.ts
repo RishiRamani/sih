@@ -73,12 +73,12 @@ export class RealApiAdapter implements ApiClient {
   }
 
   async listScans(): Promise<Scan[]> {
-    const raw = await request<BackendScanResult[]>("/scans");
-    raw.forEach((r) => {
-      if (r.scan_id) this.scanCache.set(r.scan_id, r);
-    });
-    return raw.map(toScan);
-  }
+  const raw = await request<BackendScanResult[]>("/scans");
+  raw.forEach((r) => {
+    if (r.scan_id) this.scanCache.set(r.scan_id, r);
+  });
+  return raw.map(toScan);
+}
 
   async deleteScan(scanId: string): Promise<void> {
     await request(`/scans/${encodeURIComponent(scanId)}`, { method: "DELETE" });
@@ -132,6 +132,14 @@ export class RealApiAdapter implements ApiClient {
     if (cached) return toScan(cached);
     return this.getScan(scanId);
   }
+
+  async getAllScans(): Promise<Scan[]> {
+  const raw = await request<BackendScanResult[]>("/scans");
+  raw.forEach((r) => {
+    if (r.scan_id) this.scanCache.set(r.scan_id, r);
+  });
+  return raw.map(toScan);
+}
 
   async getFindings(scanId: string, query: FindingsQuery = {}): Promise<FindingsResponse> {
     let raw = await this.ensureScanLoaded(scanId);

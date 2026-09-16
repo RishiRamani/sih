@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -10,25 +11,69 @@ import {
   Sun,
   FlaskConical,
   Activity,
+  GitCompareArrows,
 } from "lucide-react";
 import { useTheme } from "@/components/theme/ThemeProvider";
 import { isMockApi } from "@/lib/api";
 import { cn } from "@/lib/utils";
+import { listComparisons } from "@/lib/comparisons";
 
-const NAV_ITEMS = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/scans", label: "Scans", icon: ScanLine },
-  { href: "/scans/new", label: "New scan", icon: PlusCircle },
-];
+interface NavItem {
+  href: string;
+  label: string;
+  icon: typeof LayoutDashboard;
+  badge?: number;
+  /** Rendered as a raised button instead of a link */
+  cta?: boolean;
+}
 
 export function AppNav() {
   const pathname = usePathname();
   const { theme, toggleTheme } = useTheme();
+  const [comparisonCount, setComparisonCount] = useState(0);
 
-  const isItemActive = (href: string) =>
-    href === "/scans"
-      ? pathname.startsWith("/scans") && pathname !== "/scans/new"
-      : pathname === href;
+  // Read the count on mount and subscribe to changes
+  useEffect(() => {
+    function refresh() {
+      setComparisonCount(listComparisons().length);
+    }
+    refresh();
+    window.addEventListener("storage", refresh);
+    window.addEventListener("ecdat-comparisons-changed", refresh);
+    return () => {
+      window.removeEventListener("storage", refresh);
+      window.removeEventListener("ecdat-comparisons-changed", refresh);
+    };
+  }, []);
+
+  const navItems: NavItem[] = [
+    { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+    { href: "/scans", label: "Scans", icon: ScanLine },
+    { href: "/scans/new", label: "New scan", icon: PlusCircle, cta: true },
+  ];
+
+  // Insert Comparisons between Scans and New scan when there's history
+  if (comparisonCount > 0) {
+    navItems.splice(2, 0, {
+      href: "/comparisons",
+      label: "Comparisons",
+      icon: GitCompareArrows,
+      badge: comparisonCount,
+    });
+  }
+
+  const isItemActive = (href: string) => {
+    if (href === "/scans") {
+      return pathname.startsWith("/scans") && pathname !== "/scans/new";
+    }
+    if (href === "/comparisons") {
+      return (
+        pathname.startsWith("/comparisons") ||
+        /^\/scans\/[^/]+\/compare\//.test(pathname)
+      );
+    }
+    return pathname === href;
+  };
 
   return (
     <header className="sticky top-0 z-30 border-b border-rule bg-surface">
@@ -49,36 +94,44 @@ export function AppNav() {
         </Link>
 
         <nav className="ml-10 hidden items-center gap-1 md:flex">
-  {NAV_ITEMS.map((item, i) => {
-    const active = isItemActive(item.href);
-    const isPrimaryCta = item.href === "/scans/new";
-    return (
-      <div key={item.href} className="flex items-center">
-        {i === 1 ? (
-          <span className="mx-2 h-5 w-px bg-border" aria-hidden />
-        ) : null}
-        <Link
-          href={item.href}
-          aria-current={active ? "page" : undefined}
-          className={cn(
-            "relative flex h-16 items-center gap-2 px-3.5 text-[13px] font-medium transition-colors",
-            isPrimaryCta
-              ? "my-auto h-9 rounded bg-accent px-3.5 text-on-accent hover:bg-accent-bright"
-              : active
-                ? "text-accent"
-                : "text-text-secondary hover:text-accent"
-          )}
-        >
-          <item.icon size={14} strokeWidth={2} />
-          <span>{item.label}</span>
-          {!isPrimaryCta && active ? (
-            <span className="absolute inset-x-2 bottom-0 h-[2px] bg-accent" />
-          ) : null}
-        </Link>
-      </div>
-    );
-  })}
-</nav>
+          {navItems.map((item, i) => {
+            const active = isItemActive(item.href);
+            const isPrimaryCta = item.cta === true;
+            const isLast = i === navItems.length - 1;
+
+            return (
+              <div key={item.href} className="flex items-center">
+                {/* Divider before the CTA */}
+                {isLast && isPrimaryCta ? (
+                  <span className="mx-2 h-5 w-px bg-border" aria-hidden />
+                ) : null}
+                <Link
+                  href={item.href}
+                  aria-current={active ? "page" : undefined}
+                  className={cn(
+                    "relative flex h-16 items-center gap-2 px-3.5 text-[13px] font-medium transition-colors",
+                    isPrimaryCta
+                      ? "my-auto h-9 rounded bg-accent px-3.5 text-on-accent hover:bg-accent-bright"
+                      : active
+                        ? "text-accent"
+                        : "text-text-secondary hover:text-accent"
+                  )}
+                >
+                  <item.icon size={14} strokeWidth={2} />
+                  <span>{item.label}</span>
+                  {!isPrimaryCta && item.badge ? (
+                    <span className="ml-0.5 rounded-sm bg-accent/15 px-1.5 py-0.5 font-mono text-[9px] font-semibold text-accent">
+                      {item.badge}
+                    </span>
+                  ) : null}
+                  {!isPrimaryCta && active ? (
+                    <span className="absolute inset-x-2 bottom-0 h-[2px] bg-accent" />
+                  ) : null}
+                </Link>
+              </div>
+            );
+          })}
+        </nav>
 
         {/* Right cluster */}
         <div className="ml-auto flex items-center gap-3">
@@ -109,8 +162,8 @@ export function AppNav() {
       </div>
 
       {/* Mobile nav row */}
-      <nav className="flex items-center gap-1 border-t border-border px-4 py-2 md:hidden">
-        {NAV_ITEMS.map((item) => {
+      <nav className="flex items-center gap-1 overflow-x-auto border-t border-border px-4 py-2 md:hidden">
+        {navItems.map((item) => {
           const active = isItemActive(item.href);
           return (
             <Link
@@ -123,6 +176,11 @@ export function AppNav() {
             >
               <item.icon size={12} />
               {item.label}
+              {item.badge ? (
+                <span className="ml-0.5 rounded-sm bg-accent/20 px-1 font-mono text-[9px] font-semibold text-accent">
+                  {item.badge}
+                </span>
+              ) : null}
             </Link>
           );
         })}

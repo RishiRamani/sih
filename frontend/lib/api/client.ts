@@ -53,6 +53,7 @@ export interface ApiClient {
   getDashboardSummary(): Promise<DashboardSummary>;
 
   listScans(): Promise<Scan[]>;
+  getAllScans(): Promise<Scan[]>;
   deleteScan(scanId: string): Promise<void>;
   createScan(input: NewScanInput): Promise<Scan>;
   getScan(scanId: string): Promise<Scan>;
