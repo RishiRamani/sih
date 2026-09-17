@@ -1,7 +1,9 @@
 from datetime import datetime
+from pathlib import Path
 from uuid import uuid4
 
 from ..schemas.scan import ScanResult
+from ..scanners.source.file_enumerator import enumerate_source_files
 from .database import get_connection
 
 
@@ -23,6 +25,10 @@ class ScanRepository:
             or result.started_at
             or datetime.now()
         )
+        if result.started_at is None:
+            result.started_at = created_at
+        if result.completed_at is None and result.status.value == "completed":
+            result.completed_at = created_at
 
         result_json = result.model_dump_json()
 
@@ -59,7 +65,7 @@ class ScanRepository:
         with get_connection() as connection:
             row = connection.execute(
                 """
-                SELECT result_json
+                SELECT result_json, created_at
                 FROM scans
                 WHERE scan_id = ?
                 """,
@@ -69,7 +75,11 @@ class ScanRepository:
         if row is None:
             return None
 
-        return ScanResult.model_validate_json(row["result_json"])
+        result = _attach_persisted_timestamp(
+            ScanResult.model_validate_json(row["result_json"]),
+            row["created_at"],
+        )
+        return _repair_legacy_coverage(result)
 
     def update(self, result: ScanResult) -> ScanResult:
         if not result.scan_id:
@@ -92,14 +102,19 @@ class ScanRepository:
         with get_connection() as connection:
             rows = connection.execute(
                 """
-                SELECT result_json
+                SELECT result_json, created_at
                 FROM scans
                 ORDER BY created_at DESC
                 """
             ).fetchall()
 
         return [
-            ScanResult.model_validate_json(row["result_json"])
+            _repair_legacy_coverage(
+                _attach_persisted_timestamp(
+                    ScanResult.model_validate_json(row["result_json"]),
+                    row["created_at"],
+                )
+            )
             for row in rows
         ]
 
@@ -122,4 +137,35 @@ class ScanRepository:
         return cursor.rowcount > 0
 
 
+def _repair_legacy_coverage(result: ScanResult) -> ScanResult:
+    """Recover coverage for scans saved before coverage was populated."""
+
+    coverage = result.coverage
+    target = Path(result.target_path)
+    if not target.exists():
+        return result
+
+    if target.is_file():
+        coverage.files_total = 1
+        coverage.files_scanned = 1
+        return result
+
+    supported, unsupported, _oversize = enumerate_source_files(str(target))
+    total_files = sum(1 for path in target.rglob("*") if path.is_file())
+    coverage.files_scanned = len(supported)
+    coverage.files_total = total_files
+    coverage.unsupported_files = len(unsupported)
+    coverage.skipped_files = max(0, total_files - len(supported) - len(unsupported))
+    return result
+
+
 scan_repository = ScanRepository()
+
+
+def _attach_persisted_timestamp(result: ScanResult, created_at: str) -> ScanResult:
+    """Expose the database creation time for legacy JSON scan results."""
+    if result.started_at is None:
+        result.started_at = datetime.fromisoformat(created_at)
+    if result.completed_at is None and result.status.value == "completed":
+        result.completed_at = result.started_at
+    return result
