@@ -70,7 +70,7 @@ export default function DashboardPage() {
   const gradeStyle = GRADE_STYLE[gradeResult.grade];
 
   return (
-    <AppShell title="Dashboard">
+    <AppShell >
       <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="eyebrow">Posture</p>

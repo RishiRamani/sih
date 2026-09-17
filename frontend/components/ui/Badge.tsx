@@ -66,10 +66,10 @@ export function ScanStatusBadge({ status }: { status: ScanStatus }) {
   );
 }
 
-export function UnknownValue({ label = "Unknown" }: { label?: string }) {
+export function UnknownValue({ label = "—" }: { label?: string }) {
   return (
-    <span className="inline-flex items-center gap-1 text-[11px] uppercase tracking-[0.05em] text-text-secondary">
-      <HelpCircle size={11} />
+    <span className="">
+      {/* <HelpCircle size={11} /> */}
       {label}
     </span>
   );

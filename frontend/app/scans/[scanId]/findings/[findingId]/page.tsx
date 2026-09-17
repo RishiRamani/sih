@@ -86,15 +86,19 @@ export default function FindingDetailPage({
             {/* Identification */}
             <Card bodyClassName="px-5 py-5">
               <div className="mb-1 flex flex-wrap items-center gap-2">
-                <h2 className="text-xl font-semibold tracking-[-0.02em] text-text-primary">
-                  {finding.algorithm}
-                  {finding.variant ? (
-                    <span className="font-normal text-text-secondary"> · {finding.variant}</span>
-                  ) : null}
-                </h2>
-                <RiskBadge level={finding.riskLevel} />
-                <ConfidenceBadge level={finding.confidence} />
-              </div>
+  <h2 className="text-xl font-semibold tracking-[-0.02em] text-text-primary">
+    {finding.algorithm}
+    {finding.variant ? <span className="font-normal text-text-secondary"> · {finding.variant}</span> : null}
+  </h2>
+  <div className="flex items-center gap-1.5">
+    <span className="text-[10px] font-semibold uppercase tracking-[0.11em] text-text-secondary">Risk</span>
+    <RiskBadge level={finding.riskLevel} />
+  </div>
+  <div className="flex items-center gap-1.5">
+    <span className="text-[10px] font-semibold uppercase tracking-[0.11em] text-text-secondary">Confidence</span>
+    <ConfidenceBadge level={finding.confidence} />
+  </div>
+</div>
               <p className="mb-5 font-mono text-[11px] uppercase tracking-[0.06em] text-text-secondary">
                 {finding.id} · scan {finding.scanId}
               </p>
@@ -149,51 +153,6 @@ export default function FindingDetailPage({
               </Card>
             ) : null}
 
-            {/* Detection */}
-            <Card
-              title="Where & how it was detected"
-              actions={<FileCode2 size={14} className="text-text-secondary" />}
-              bodyClassName="px-5 py-5"
-            >
-              <dl className="space-y-4">
-                <Field label="Source location">
-                  {finding.sourcePath ? (
-                    <span className="font-mono text-xs">
-                      {finding.sourcePath}
-                      {finding.lineStart
-                        ? `:${finding.lineStart}${
-                            finding.lineEnd && finding.lineEnd !== finding.lineStart
-                              ? `-${finding.lineEnd}`
-                              : ""
-                          }`
-                        : ""}
-                    </span>
-                  ) : (
-                    "—"
-                  )}
-                </Field>
-                <Field label="Detection methods">
-                  <div className="flex flex-wrap gap-1.5">
-                    {finding.detectionMethods.map((m) => (
-                      <span
-                        key={m}
-                        className="rounded-sm border border-border bg-elevated px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.06em] text-text-secondary"
-                      >
-                        {DETECTION_METHOD_LABEL[m] ?? m}
-                      </span>
-                    ))}
-                  </div>
-                </Field>
-                {finding.evidence ? (
-                  <Field label="Evidence">
-                    <pre className="mt-1 overflow-x-auto rounded-sm border border-border bg-elevated px-3 py-2 font-mono text-xs leading-relaxed text-text-primary">
-                      {finding.evidence}
-                    </pre>
-                  </Field>
-                ) : null}
-              </dl>
-            </Card>
-
             {/* Risk reasoning */}
             <Card
               title="Why this is risky"
@@ -245,6 +204,53 @@ export default function FindingDetailPage({
                 </Field>
               </dl>
             </Card>
+
+            {/* Detection */}
+            <Card
+              title="Where & how it was detected"
+              actions={<FileCode2 size={14} className="text-text-secondary" />}
+              bodyClassName="px-5 py-5"
+            >
+              <dl className="space-y-4">
+                <Field label="Source location">
+                  {finding.sourcePath ? (
+                    <span className="font-mono text-xs">
+                      {finding.sourcePath}
+                      {finding.lineStart
+                        ? `:${finding.lineStart}${
+                            finding.lineEnd && finding.lineEnd !== finding.lineStart
+                              ? `-${finding.lineEnd}`
+                              : ""
+                          }`
+                        : ""}
+                    </span>
+                  ) : (
+                    "—"
+                  )}
+                </Field>
+                <Field label="Detection methods">
+                  <div className="flex flex-wrap gap-1.5">
+                    {finding.detectionMethods.map((m) => (
+                      <span
+                        key={m}
+                        className="rounded-sm border border-border bg-elevated px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.06em] text-text-secondary"
+                      >
+                        {DETECTION_METHOD_LABEL[m] ?? m}
+                      </span>
+                    ))}
+                  </div>
+                </Field>
+                {finding.evidence ? (
+                  <Field label="Evidence">
+                    <pre className="mt-1 overflow-x-auto rounded-sm border border-border bg-elevated px-3 py-2 font-mono text-xs leading-relaxed text-text-primary">
+                      {finding.evidence}
+                    </pre>
+                  </Field>
+                ) : null}
+              </dl>
+            </Card>
+
+            
           </div>
 
           {/* Right column */}

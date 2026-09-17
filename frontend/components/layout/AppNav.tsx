@@ -135,7 +135,7 @@ export function AppNav() {
 
         {/* Right cluster */}
         <div className="ml-auto flex items-center gap-3">
-          {isMockApi ? (
+          {/* {isMockApi ? (
             <span className="hidden items-center gap-1.5 rounded border border-amber/40 bg-amber-soft px-2.5 py-1 font-mono text-[9px] font-semibold uppercase tracking-[0.15em] text-amber sm:inline-flex">
               <FlaskConical size={10} />
               Mock
@@ -145,7 +145,7 @@ export function AppNav() {
               <Activity size={10} className="text-safe" />
               Live
             </span>
-          )}
+          )} */}
 
           <span className="hidden h-5 w-px bg-border sm:block" />
 

@@ -73,12 +73,12 @@ export class RealApiAdapter implements ApiClient {
   }
 
   async listScans(): Promise<Scan[]> {
-  const raw = await request<BackendScanResult[]>("/scans");
-  raw.forEach((r) => {
-    if (r.scan_id) this.scanCache.set(r.scan_id, r);
-  });
-  return raw.map(toScan);
-}
+    const raw = await request<BackendScanResult[]>("/scans");
+    raw.forEach((r) => {
+      if (r.scan_id) this.scanCache.set(r.scan_id, r);
+    });
+    return raw.map(toScan);
+  }
 
   async deleteScan(scanId: string): Promise<void> {
     await request(`/scans/${encodeURIComponent(scanId)}`, { method: "DELETE" });
@@ -134,15 +134,15 @@ export class RealApiAdapter implements ApiClient {
   }
 
   async getAllScans(): Promise<Scan[]> {
-  const raw = await request<BackendScanResult[]>("/scans");
-  raw.forEach((r) => {
-    if (r.scan_id) this.scanCache.set(r.scan_id, r);
-  });
-  return raw.map(toScan);
-}
+    const raw = await request<BackendScanResult[]>("/scans");
+    raw.forEach((r) => {
+      if (r.scan_id) this.scanCache.set(r.scan_id, r);
+    });
+    return raw.map(toScan);
+  }
 
   async getFindings(scanId: string, query: FindingsQuery = {}): Promise<FindingsResponse> {
-    let raw = await this.ensureScanLoaded(scanId);
+    const raw = await this.ensureScanLoaded(scanId);
     let findings = raw.findings.map((f, idx) =>
       toFinding(f, findIntelForFinding(raw.intelligence, idx, f), scanId, raw)
     );
@@ -192,8 +192,9 @@ export class RealApiAdapter implements ApiClient {
 
   async getFinding(scanId: string, findingId: string): Promise<Finding> {
     const raw = await this.ensureScanLoaded(scanId);
+    // Pass `raw` as context so relativeAssetPath can strip the base path
     const all = raw.findings.map((f, idx) =>
-      toFinding(f, findIntelForFinding(raw.intelligence, idx, f), scanId)
+      toFinding(f, findIntelForFinding(raw.intelligence, idx, f), scanId, raw)
     );
     const decodedFindingId = decodeURIComponent(findingId);
     const found = all.find((f) => f.id === findingId || f.id === decodedFindingId);
@@ -202,11 +203,10 @@ export class RealApiAdapter implements ApiClient {
   }
 
   async getCbom(scanId: string): Promise<CbomResponse> {
-    // The backend's /cbom returns a real CycloneDX CBOM, which is different
-    // from our frontend's CbomResponse shape. Synthesize ours from findings.
     const raw = await this.ensureScanLoaded(scanId);
+    // Pass `raw` as context so relativeAssetPath can strip the base path
     const findings = raw.findings.map((f, idx) =>
-      toFinding(f, findIntelForFinding(raw.intelligence, idx, f), scanId)
+      toFinding(f, findIntelForFinding(raw.intelligence, idx, f), scanId, raw)
     );
     const components = Array.from(
       new Map(
@@ -232,8 +232,9 @@ export class RealApiAdapter implements ApiClient {
 
   async getRisk(scanId: string): Promise<QuantumReadinessSummary> {
     const raw = await this.ensureScanLoaded(scanId);
+    // Pass `raw` as context so relativeAssetPath can strip the base path
     const findings = raw.findings.map((f, idx) =>
-      toFinding(f, findIntelForFinding(raw.intelligence, idx, f), scanId)
+      toFinding(f, findIntelForFinding(raw.intelligence, idx, f), scanId, raw)
     );
     return toQuantumReadinessSummary(raw.intelligence, findings);
   }
@@ -244,7 +245,7 @@ export class RealApiAdapter implements ApiClient {
     assumptions: { dataLifetime?: string; businessCriticality?: string }
   ): Promise<Finding> {
     const raw = await this.ensureScanLoaded(scanId);
-    const index = raw.findings.findIndex((f, idx) => this.toFindingId(scanId, f) === findingId);
+    const index = raw.findings.findIndex((f) => this.toFindingId(scanId, f) === findingId);
     if (index < 0) throw new ApiError(`Finding ${findingId} not found.`, 404);
     const updated = await request<BackendFinding>(`/scans/${scanId}/findings/${index}`, {
       method: "PATCH",
@@ -256,7 +257,8 @@ export class RealApiAdapter implements ApiClient {
       }),
     });
     raw.findings[index] = updated;
-    return toFinding(updated, raw.intelligence[index], scanId);
+    // Pass `raw` as context here too
+    return toFinding(updated, raw.intelligence[index], scanId, raw);
   }
 
   async getRecommendations(scanId: string): Promise<Recommendation[]> {
@@ -304,10 +306,6 @@ export class RealApiAdapter implements ApiClient {
     return `${scanId}:${finding.asset_path}:${finding.line_start ?? 0}:${finding.algorithm ?? "unknown"}`;
   }
 
-  // ----------------------------------------------------------------
-  // Helpers
-  // ----------------------------------------------------------------
-
   private async ensureScanLoaded(scanId: string): Promise<BackendScanResult> {
     const cached = this.scanCache.get(scanId);
     if (cached) return cached;
@@ -322,10 +320,8 @@ function findIntelForFinding(
   index: number,
   finding: BackendFinding
 ): BackendIntelligenceAssessment | undefined {
-  // Match by index first
   const byIndex = intelligence.find((i) => i.finding_index === index);
   if (byIndex) return byIndex;
-  // Fall back to algorithm match
   return intelligence.find((i) => i.algorithm === finding.algorithm);
 }
 
