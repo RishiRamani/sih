@@ -126,11 +126,22 @@ def compute_risk(
         raw_severity = "MEDIUM"
         quantum_floored = True
 
+    context_escalated = (
+        business_criticality == "CRITICAL"
+        and mosca.get("migration_urgency") == "IMMEDIATE"
+        and quantum.get("quantum_status") == "BROKEN"
+    )
+    if context_escalated:
+        raw_severity = "CRITICAL"
+
     severity = raw_severity
     confidence_capped = False
     # Confidence cap — a low-confidence detection cannot be CRITICAL or HIGH
     # until corroborated by stronger evidence.
-    if detection_confidence < CONFIDENCE_CAP_THRESHOLD:
+    # Explicit critical business context is itself corroborating assessment
+    # input; do not erase its effect because scanner confidence is low.
+    context_confirms_urgency = business_criticality == "CRITICAL"
+    if detection_confidence < CONFIDENCE_CAP_THRESHOLD and not context_confirms_urgency:
         if severity in ("CRITICAL", "HIGH"):
             severity = "MEDIUM"
             confidence_capped = True
@@ -148,7 +159,7 @@ def compute_risk(
             "Business criticality not provided; assumed MEDIUM for scoring."
         )
 
-    if detection_confidence < CONFIDENCE_CAP_THRESHOLD:
+    if detection_confidence < CONFIDENCE_CAP_THRESHOLD and not context_confirms_urgency:
         explanation_parts.append(
             f"Detection confidence is low ({detection_confidence:.2f}); "
             "severity capped at MEDIUM pending stronger evidence."
@@ -161,6 +172,10 @@ def compute_risk(
     if quantum_floored:
         explanation_parts.append(
             "Algorithm is quantum-vulnerable; severity floored at MEDIUM."
+        )
+    if context_escalated:
+        explanation_parts.append(
+            "Critical business context and an immediate deadline elevate this quantum-broken finding to CRITICAL."
         )
     if confidence_capped:
         explanation_parts.append(

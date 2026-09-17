@@ -28,4 +28,4 @@ def get_report(scan_id: str, format: str = Query(default="html", pattern="^(html
 
     if format == "json":
         return JSONResponse(result.model_dump(mode="json"))
-    return HTMLResponse(render_html(result), headers={"Content-Disposition": f'inline; filename="ecdat-{scan_id}.html"'})
+    return HTMLResponse(render_html(result), headers={"Content-Disposition": f'attachment; filename="ecdat-{scan_id}.html"'})

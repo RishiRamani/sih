@@ -8,6 +8,9 @@ from .source_scanner import scan_source
 class SourceScanner(BaseScanner):
     """Adapter that exposes the existing source scanner to ScanPipeline."""
 
+    def __init__(self):
+        self.last_coverage = {}
+
     @property
     def name(self) -> str:
         return "Source Crypto Scanner"
@@ -16,5 +19,6 @@ class SourceScanner(BaseScanner):
         return target.is_dir()
 
     def scan(self, target: Path) -> list[Finding]:
-        findings, _coverage = scan_source(str(target))
+        findings, coverage = scan_source(str(target))
+        self.last_coverage = coverage
         return findings

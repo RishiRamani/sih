@@ -45,16 +45,19 @@ class ScanPipeline:
         raw_findings: list[Finding] = []
         warnings: list[CoverageWarning] = []
         files_total = sum(1 for path in target.rglob("*") if path.is_file()) if target.is_dir() else 1
-        supported_scanners = 0
+        source_coverage: dict = {}
+        certificate_coverage: dict = {}
 
         for scanner in self.scanners:
             if not scanner.can_scan(target):
                 continue
-            supported_scanners += 1
-
             try:
                 scanner_findings = scanner.scan(target)
                 raw_findings.extend(scanner_findings)
+                if scanner.name == "Source Crypto Scanner":
+                    source_coverage = scanner.last_coverage
+                elif scanner.name == "X.509 Certificate Scanner":
+                    certificate_coverage = scanner.last_coverage
 
             except Exception as exc:
                 warnings.append(
@@ -80,6 +83,27 @@ class ScanPipeline:
             application_name_override=application_name_override,
         )
 
+        source_scanned = source_coverage.get("files_scanned", 0)
+        source_unsupported = set(source_coverage.get("unsupported_paths", []))
+        certificate_paths = certificate_coverage.get("candidate_paths", set())
+        files_scanned = source_scanned + certificate_coverage.get("files_scanned", 0)
+        unsupported_files = source_coverage.get(
+            "files_unsupported",
+            len(source_unsupported - certificate_paths),
+        )
+        skipped_files = source_coverage.get("files_skipped_oversize", 0)
+        parse_errors = source_coverage.get("files_parse_error", 0) + certificate_coverage.get("parse_errors", 0)
+        if source_coverage:
+            classified_files = (
+                source_scanned
+                + unsupported_files
+                + skipped_files
+                + source_coverage.get("files_parse_error", 0)
+            )
+            # Files below ignored directories such as __pycache__ are skipped
+            # intentionally, but still belong in the coverage denominator.
+            skipped_files += max(0, files_total - classified_files)
+
         return ScanResult(
             target_path=str(target),
             status=ScanStatus.COMPLETED,
@@ -93,8 +117,10 @@ class ScanPipeline:
             crqc_arrival_years=crqc_arrival_years,
             coverage=ScanCoverage(
                 files_total=files_total,
-                files_scanned=files_total if supported_scanners else 0,
-                unsupported_files=files_total if not supported_scanners else 0,
+                files_scanned=files_scanned if target.is_dir() else files_scanned,
+                unsupported_files=unsupported_files,
+                skipped_files=skipped_files,
+                parse_errors=parse_errors,
                 warnings=warnings,
             ),
         )

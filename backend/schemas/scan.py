@@ -92,5 +92,6 @@ class ScanCoverage(BaseModel):
     files_scanned: int = 0
     files_total: int = 0
     unsupported_files: int = 0
+    skipped_files: int = 0
     parse_errors: int = 0
     warnings: list[CoverageWarning] = Field(default_factory=list)
