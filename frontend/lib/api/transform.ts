@@ -335,12 +335,13 @@ function normalizeDirection(d: string): MigrationDirection {
 
 function normalizePriority(p: string): RiskLevel {
   const upper = p.toUpperCase();
+  if (upper === "CRITICAL" || upper === "HIGH" || upper === "MEDIUM" || upper === "LOW") {
+    return upper as RiskLevel;
+  }
   if (upper === "IMMEDIATE") return "CRITICAL";
   if (upper === "PLANNED") return "MEDIUM";
   if (upper === "MONITOR") return "LOW";
-  if (upper === "CRITICAL") return "CRITICAL";
-  if (upper === "HIGH") return "HIGH";
-  if (upper === "MEDIUM") return "MEDIUM";
+  if (upper === "NONE") return "LOW";
   return "LOW";
 }
 
@@ -446,15 +447,54 @@ function normalizeRecommendationStatus(value: string | undefined): Recommendatio
   return "NOT_STARTED";
 }
 
+
 function relativeAssetPath(assetPath: string, targetPath?: string): string {
-  if (!targetPath) return assetPath;
   const asset = assetPath.replace(/\\/g, "/");
-  const target = targetPath.replace(/\\/g, "/").replace(/\/+$/, "");
-  const assetLower = asset.toLowerCase();
-  const targetLower = target.toLowerCase();
-  if (assetLower === targetLower) return asset.split("/").pop() ?? asset;
-  if (assetLower.startsWith(`${targetLower}/`)) return asset.slice(target.length + 1);
-  return asset;
+  const target = targetPath ? targetPath.replace(/\\/g, "/").replace(/\/+$/, "") : "";
+
+  if (target) {
+    // Strategy 1: strip prefix
+    const assetLower = asset.toLowerCase();
+    const targetLower = target.toLowerCase();
+
+    if (assetLower === targetLower) {
+      return asset.split("/").pop() ?? asset;
+    }
+    if (assetLower.startsWith(`${targetLower}/`)) {
+      return asset.slice(target.length + 1);
+    }
+
+    // Strategy 2: find the deepest segment of target that appears in asset
+    const targetSegments = target.split("/").filter(Boolean);
+    for (let i = 0; i < targetSegments.length; i += 1) {
+      const suffix = targetSegments.slice(i).join("/").toLowerCase();
+      if (!suffix) continue;
+      const idx = assetLower.indexOf(`/${suffix}/`);
+      if (idx >= 0) {
+        return asset.slice(idx + suffix.length + 2);
+      }
+    }
+  }
+
+  // Strategy 3: fall back to stripping common root prefixes so we never
+  // leak a full absolute path to the UI.
+  return stripKnownRoots(asset);
+}
+
+
+function stripKnownRoots(p: string): string {
+  let s = p;
+
+  // Windows drive: C:/...
+  s = s.replace(/^[A-Za-z]:\//, "");
+
+  // Common Unix roots
+  s = s.replace(/^\/(home|Users|tmp|var|opt|mnt|workspace)\/[^/]+\//, "");
+
+  // Any remaining leading slash
+  s = s.replace(/^\/+/, "");
+
+  return s || p;
 }
 
 function normalizeBusinessCriticality(value: unknown): Finding["businessCriticality"] {

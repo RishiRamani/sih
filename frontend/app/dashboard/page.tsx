@@ -30,6 +30,16 @@ import { formatDate, INPUT_TYPE_LABEL, cn } from "@/lib/utils";
 import { computeGrade } from "@/lib/grade";
 import { GRADE_STYLE } from "@/lib/grade-style";
 
+function displaySource(scan: Scan): string {
+  const src = scan.sourceLabel;
+  // URLs stay as-is
+  if (/^(https?:\/\/|git@)/.test(src)) return src;
+  // Local paths reduce to the last segment
+  const parts = src.replace(/\\/g, "/").replace(/\/+$/, "").split("/");
+  if (scan.name === parts[parts.length - 1]) return "";
+  return src;
+}
+
 export default function DashboardPage() {
   const [data, setData] = useState<DashboardSummary | null>(null);
   const [latestFindings, setLatestFindings] = useState<Finding[]>([]);
@@ -117,7 +127,7 @@ export default function DashboardPage() {
                         {latestScan.name}
                       </h3>
                       <p className="mt-0.5 truncate font-mono text-xs text-text-secondary">
-                        {latestScan.sourceLabel}
+                        {displaySource(latestScan)}
                       </p>
                     </>
                   ) : null}

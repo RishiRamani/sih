@@ -33,15 +33,21 @@ const INPUT_TYPES: {
   { value: "DEPENDENCY_MANIFEST", label: "Dependency manifest", description: "package.json, pom.xml, requirements.txt, etc.", icon: FileText },
 ];
 
+type Criticality = "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
+
 export default function NewScanPage() {
   const router = useRouter();
-  const toast = useToast();
+
+  // Form state
   const [inputType, setInputType] = useState<AssetInputType>("SOURCE_REPOSITORY");
   const [name, setName] = useState("");
   const [sourceLabel, setSourceLabel] = useState("");
-  const [businessCriticality, setBusinessCriticality] = useState<"LOW" | "MEDIUM" | "HIGH" | "CRITICAL">("MEDIUM");
-  const [dataLifetimeYears, setDataLifetimeYears] = useState(3);
-  const [crqcArrivalYears, setCrqcArrivalYears] = useState(12);
+
+  // Business context state
+  const [criticality, setCriticality] = useState<Criticality>("MEDIUM");
+  const [dataLifetime, setDataLifetime] = useState(3);
+  const [migrationTime, setMigrationTime] = useState(2);
+
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -51,30 +57,28 @@ export default function NewScanPage() {
     e.preventDefault();
     if (!name.trim() || !sourceLabel.trim()) {
       setError("Name and source are both required.");
-      toast({ tone: "error", title: "Missing input", description: "Name and source are both required." });
       return;
     }
+
     setSubmitting(true);
     setError(null);
+
     try {
-      const scan = await api.createScan({
+      // Debug: log what we're about to send
+      const payload = {
         name: name.trim(),
         inputType,
         sourceLabel: sourceLabel.trim(),
-        businessCriticality,
-        dataLifetimeYears,
-        crqcArrivalYears,
-      });
-      toast({
-        tone: "success",
-        title: "Scan started",
-        description: `${scan.name} is now running.`,
-      });
+        businessCriticality: criticality,
+        dataLifetimeYears: dataLifetime,
+        migrationTimeYears: migrationTime,
+      };
+      console.log("[NewScan] submitting:", payload);
+
+      const scan = await api.createScan(payload);
       router.push(`/scans/${scan.id}/findings`);
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "Failed to start scan.";
-      setError(msg);
-      toast({ tone: "error", title: "Scan failed", description: msg });
+      setError(err instanceof Error ? err.message : "Failed to start scan.");
       setSubmitting(false);
     }
   }
@@ -88,9 +92,9 @@ export default function NewScanPage() {
             Start a new scan
           </h2>
           <p className="mt-1 text-[13px] leading-relaxed text-text-secondary">
-            ECDAT discovers cryptographic usage across the asset you provide, then normalizes findings
-            into a CBOM and risk assessment. Analysis, detection, and risk scoring all happen on the
-            backend.
+            ECDAT discovers cryptographic usage across the asset you provide, then normalizes
+            findings into a CBOM and risk assessment. Analysis, detection, and risk scoring all
+            happen on the backend.
           </p>
         </div>
 
@@ -118,29 +122,6 @@ export default function NewScanPage() {
               ))}
             </div>
             <p className="mt-3 text-xs text-text-secondary">{selected.description}</p>
-          </Card>
-
-          <Card title="Risk context">
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <label className="text-[10px] font-semibold uppercase tracking-[0.11em] text-text-secondary">
-                Business criticality
-                <select value={businessCriticality} onChange={(e) => setBusinessCriticality(e.target.value as typeof businessCriticality)} className="mt-1.5 w-full rounded border border-border bg-elevated px-3 py-2 text-sm font-normal normal-case tracking-normal text-text-primary focus:border-accent focus:outline-none">
-                  <option value="LOW">Low</option>
-                  <option value="MEDIUM">Medium</option>
-                  <option value="HIGH">High</option>
-                  <option value="CRITICAL">Critical</option>
-                </select>
-              </label>
-              <label className="text-[10px] font-semibold uppercase tracking-[0.11em] text-text-secondary">
-                Data lifetime (years)
-                <input type="number" min="0" step="1" value={dataLifetimeYears} onChange={(e) => setDataLifetimeYears(Number(e.target.value))} className="mt-1.5 w-full rounded border border-border bg-elevated px-3 py-2 text-sm font-normal tracking-normal text-text-primary focus:border-accent focus:outline-none" />
-              </label>
-              <label className="text-[10px] font-semibold uppercase tracking-[0.11em] text-text-secondary">
-                Expected quantum computer (years)
-                <input type="number" min="0" step="1" value={crqcArrivalYears} onChange={(e) => setCrqcArrivalYears(Number(e.target.value))} className="mt-1.5 w-full rounded border border-border bg-elevated px-3 py-2 text-sm font-normal tracking-normal text-text-primary focus:border-accent focus:outline-none" />
-              </label>
-            </div>
-            <p className="mt-3 text-xs text-text-secondary">These values feed Mosca timing risk and are stored with the scan assessment.</p>
           </Card>
 
           <Card title="Scan details">
@@ -190,6 +171,71 @@ export default function NewScanPage() {
                 </p>
               </div>
             </div>
+          </Card>
+
+          <Card title="Business context">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+              <div>
+                <label
+                  htmlFor="scan-criticality"
+                  className="mb-1.5 block text-[10px] font-semibold uppercase tracking-[0.11em] text-text-secondary"
+                >
+                  Business criticality
+                </label>
+                <select
+                  id="scan-criticality"
+                  value={criticality}
+                  onChange={(e) => setCriticality(e.target.value as Criticality)}
+                  className="w-full rounded border border-border bg-elevated px-3 py-2 text-sm text-text-primary focus:border-accent focus:outline-none"
+                >
+                  <option value="LOW">Low</option>
+                  <option value="MEDIUM">Medium</option>
+                  <option value="HIGH">High</option>
+                  <option value="CRITICAL">Critical</option>
+                </select>
+              </div>
+
+              <div>
+                <label
+                  htmlFor="scan-data-lifetime"
+                  className="mb-1.5 block text-[10px] font-semibold uppercase tracking-[0.11em] text-text-secondary"
+                >
+                  Data lifetime (years)
+                </label>
+                <input
+                  id="scan-data-lifetime"
+                  type="number"
+                  min={0}
+                  step="0.5"
+                  value={dataLifetime}
+                  onChange={(e) => setDataLifetime(Number(e.target.value))}
+                  className="w-full rounded border border-border bg-elevated px-3 py-2 text-sm text-text-primary focus:border-accent focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label
+                  htmlFor="scan-migration-time"
+                  className="mb-1.5 block text-[10px] font-semibold uppercase tracking-[0.11em] text-text-secondary"
+                >
+                  Migration time (years)
+                </label>
+                <input
+                  id="scan-migration-time"
+                  type="number"
+                  min={0}
+                  step="0.5"
+                  value={migrationTime}
+                  onChange={(e) => setMigrationTime(Number(e.target.value))}
+                  className="w-full rounded border border-border bg-elevated px-3 py-2 text-sm text-text-primary focus:border-accent focus:outline-none"
+                />
+              </div>
+            </div>
+            <p className="mt-3 text-xs leading-relaxed text-text-secondary">
+              Business criticality weights the risk score. Data lifetime and migration time feed
+              Mosca&apos;s inequality — the sum must exceed the CRQC horizon (default 12 years) for
+              migration to be urgent.
+            </p>
           </Card>
 
           {error ? (

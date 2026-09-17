@@ -11,8 +11,19 @@ import { LoadingState, ErrorState, EmptyState } from "@/components/ui/States";
 import { RescanButton } from "@/components/layout/RescanButton";
 import { api } from "@/lib/api";
 import type { Scan } from "@/lib/types";
-import { formatDate, formatDuration, INPUT_TYPE_LABEL } from "@/lib/utils";
+import { INPUT_TYPE_LABEL } from "@/lib/utils";
 import { listComparisonsForScan } from "@/lib/comparisons";
+import { useRouter } from "next/navigation";
+
+function displaySource(scan: Scan): string {
+  const src = scan.sourceLabel;
+  // URLs stay as-is
+  if (/^(https?:\/\/|git@)/.test(src)) return src;
+  // Local paths reduce to the last segment
+  const parts = src.replace(/\\/g, "/").replace(/\/+$/, "").split("/");
+  if (scan.name === parts[parts.length - 1]) return "";
+  return src;
+}
 
 function destinationFor(scan: Scan): string {
   return scan.status === "COMPLETED"
@@ -24,6 +35,7 @@ export default function ScansPage() {
   const [scans, setScans] = useState<Scan[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const router = useRouter();
 
   function load() {
     setLoading(true);
@@ -73,7 +85,7 @@ export default function ScansPage() {
       {!loading && !error && scans && scans.length > 0 ? (
         <Card bodyClassName="p-0">
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[1000px] border-collapse text-sm">
+            <table className="w-full min-w-[860px] border-collapse text-sm">
               <thead className="bg-elevated">
                 <tr>
                   <th className="border-b border-border px-4 py-2.5 text-left text-[10px] font-semibold uppercase tracking-[0.11em] text-text-secondary">
@@ -88,12 +100,6 @@ export default function ScansPage() {
                   <th className="border-b border-border px-4 py-2.5 text-left text-[10px] font-semibold uppercase tracking-[0.11em] text-text-secondary">
                     Findings
                   </th>
-                  <th className="border-b border-border px-4 py-2.5 text-left text-[10px] font-semibold uppercase tracking-[0.11em] text-text-secondary">
-                    Duration
-                  </th>
-                  <th className="border-b border-border px-4 py-2.5 text-left text-[10px] font-semibold uppercase tracking-[0.11em] text-text-secondary">
-                    Created
-                  </th>
                   <th className="border-b border-border px-4 py-2.5 text-right text-[10px] font-semibold uppercase tracking-[0.11em] text-text-secondary">
                     Actions
                   </th>
@@ -101,22 +107,24 @@ export default function ScansPage() {
               </thead>
               <tbody>
                 {scans.map((scan) => {
-  const comparisons = listComparisonsForScan(scan.id);
-  const latestComparison = comparisons[0];
-  return (
+                  const comparisons = listComparisonsForScan(scan.id);
+                  const latestComparison = comparisons[0];
+                  return (
                     <tr
                       key={scan.id}
-                      className="border-b border-border last:border-b-0 transition-colors hover:bg-elevated/60"
+                      onClick={() => router.push(destinationFor(scan))}
+                      className="cursor-pointer border-b border-border last:border-b-0 transition-colors hover:bg-elevated/60"
                     >
                       <td className="px-4 py-3">
                         <Link
                           href={destinationFor(scan)}
                           className="font-medium text-text-primary hover:text-accent"
+                          onClick={(e) => e.stopPropagation()}
                         >
                           {scan.name}
                         </Link>
                         <div className="truncate text-xs text-text-secondary">
-                          {scan.sourceLabel}
+                          {displaySource(scan)}
                         </div>
                       </td>
                       <td className="px-4 py-3 text-text-secondary">
@@ -140,36 +148,37 @@ export default function ScansPage() {
                           </span>
                         ) : null}
                       </td>
-                      <td className="px-4 py-3 font-mono-tabular text-text-secondary">
-                        {formatDuration(scan.startedAt, scan.completedAt)}
-                      </td>
-                      <td className="px-4 py-3 text-text-secondary">
-                        {formatDate(scan.createdAt)}
-                      </td>
-                      <td className="px-4 py-3">
+                      <td
+                        className="px-4 py-3"
+                        onClick={(e) => e.stopPropagation()}
+                      >
                         <div className="flex items-center justify-end gap-1.5">
-                         {latestComparison ? (
-  <Link
-    href={`/scans/${scan.id}/compare/${latestComparison.newScanId === scan.id ? latestComparison.oldScanId : latestComparison.newScanId}`}
-    className="inline-flex items-center gap-1.5 rounded-sm border border-accent/35 bg-accent/8 px-2 py-1 text-[11px] font-semibold uppercase tracking-[0.05em] text-accent transition-colors hover:border-accent/60 hover:bg-accent/12"
-    title={`Compared against ${
-      latestComparison.newScanId === scan.id
-        ? latestComparison.oldScanName
-        : latestComparison.newScanName
-    }`}
-  >
-    <GitCompareArrows size={11} />
-    Compare
-  </Link>
-) : null}
+                          {latestComparison ? (
+                            <Link
+                              href={`/scans/${scan.id}/compare/${
+                                latestComparison.newScanId === scan.id
+                                  ? latestComparison.oldScanId
+                                  : latestComparison.newScanId
+                              }`}
+                              className="inline-flex items-center gap-1.5 rounded-sm border border-accent/35 bg-accent/8 px-2 py-1 text-[11px] font-semibold uppercase tracking-[0.05em] text-accent transition-colors hover:border-accent/60 hover:bg-accent/12"
+                              title={`Compared against ${
+                                latestComparison.newScanId === scan.id
+                                  ? latestComparison.oldScanName
+                                  : latestComparison.newScanName
+                              }`}
+                            >
+                              <GitCompareArrows size={11} />
+                              Compare
+                            </Link>
+                          ) : null}
                           {scan.status === "COMPLETED" ? (
-  <RescanButton
-    scan={scan}
-    variant="ghost"
-    size="sm"
-    label="Rescan"
-  />
-) : null}
+                            <RescanButton
+                              scan={scan}
+                              variant="ghost"
+                              size="sm"
+                              label="Rescan"
+                            />
+                          ) : null}
                         </div>
                       </td>
                     </tr>

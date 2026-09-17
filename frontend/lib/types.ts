@@ -238,7 +238,7 @@ export interface NewScanInput {
   inputType: AssetInputType;
   sourceLabel: string;
   fileName?: string;
-  businessCriticality?: BusinessCriticality;
+  businessCriticality?: "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
   dataLifetimeYears?: number;
   migrationTimeYears?: number;
   crqcArrivalYears?: number;
