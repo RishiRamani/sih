@@ -34,6 +34,13 @@ const STATUS_LABEL: Record<Recommendation["status"], string> = {
   ACCEPTED_RISK: "Accepted risk"
 };
 
+const rank: Record<string, number> = {
+  CRITICAL: 4,
+  HIGH: 3,
+  MEDIUM: 2,
+  LOW: 1,
+};
+
 const STATUS_STYLE: Record<Recommendation["status"], string> = {
   NOT_STARTED: "bg-text-secondary/10 text-text-secondary border-border",
   IN_PROGRESS: "bg-accent/10 text-accent border-accent/30",
@@ -87,7 +94,16 @@ export default function RecommendationsPage({ params }: { params: { scanId: stri
 
       {items.length > 0 ? (
         <div className="space-y-3">
-          {items.map((rec) => (
+          {[...items]
+  .sort((a, b) => {
+  console.log("priorities:", a.priority, b.priority, rank[a.priority], rank[b.priority]);
+  return (rank[b.priority] ?? 0) - (rank[a.priority] ?? 0);
+})
+
+    
+
+
+  .map((rec) => (
             <div key={rec.id} className="rounded-md border border-border bg-surface p-4 shadow-subtle">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
@@ -154,7 +170,7 @@ export default function RecommendationsPage({ params }: { params: { scanId: stri
             </div>
           ))}
         </div>
-      ) : null}
+       ) : null}
     </AppShell>
   );
 }

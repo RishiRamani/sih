@@ -136,7 +136,8 @@ export interface Recommendation {
   reason: string;
   direction: MigrationDirection;
   candidateAlgorithm: string;
-  priority: RiskLevel;
+  priority: RiskLevel;              
+  findingRiskLevel: RiskLevel;      
   status: "NOT_STARTED" | "IN_PROGRESS" | "MITIGATED" | "ACCEPTED_RISK";
   rationale: string;
   effort?: MigrationEffort;
@@ -204,11 +205,16 @@ export interface RiskDistributionBucket {
   count: number;
 }
 
+export interface ExposureBucket {
+  status: ExposureStatus;  
+  count: number;
+}
+
 export interface QuantumReadinessSummary {
   crqcScenario: string; // e.g. "NIST-aligned conservative: CRQC by 2033"
   criticalCount: number;
-  classicalExposure: RiskDistributionBucket[];
-  quantumExposure: RiskDistributionBucket[];
+  classicalExposure: ExposureBucket[];
+  quantumExposure: ExposureBucket[];
   prioritizedFindingIds: string[];
 }
 

@@ -15,7 +15,7 @@ from .crypto_kb import get_recommendation, lookup_algorithm
 # Migration priority derived from risk severity.
 PRIORITY_BY_SEVERITY = {
     "CRITICAL": "IMMEDIATE",
-    "HIGH": "IMMEDIATE",
+    "HIGH": "PLANNED",
     "MEDIUM": "PLANNED",
     "LOW": "MONITOR",
     "INFORMATIONAL": "NONE",

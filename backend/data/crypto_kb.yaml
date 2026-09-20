@@ -2,8 +2,8 @@
 # ECDAT Cryptographic Knowledge Base
 # Consumed by: intelligence layer, source scanner (name normalization), CBOM generator
 
-version: "1.0.0"
-last_updated: "2026-09-11"
+version: "1.1.0"
+last_updated: "2026-09-20"
 
 algorithms:
 
@@ -69,6 +69,27 @@ algorithms:
         hybrid: "X25519 + ML-KEM-768"
 
   # =======================================================
+  # POST-QUANTUM - KEY ESTABLISHMENT (FIPS 203)
+  # =======================================================
+
+  ML-KEM:
+    family: ML-KEM
+    aliases: ["ML-KEM-512", "ML-KEM-768", "ML-KEM-1024", "Kyber", "kyber", "ml-kem"]
+    primitive_types: [KEY_ESTABLISHMENT]
+    variants: [ML-KEM-512, ML-KEM-768, ML-KEM-1024]
+    classical_status:
+      status: STRONG
+      reason: "ML-KEM is a NIST-standardized KEM (FIPS 203)"
+    quantum_status:
+      status: RESILIENT
+      reason: "Lattice-based KEM designed for post-quantum security"
+    recommendation:
+      KEY_ESTABLISHMENT:
+        direction: NO_ACTION
+        candidates: [ML-KEM-768, ML-KEM-1024]
+        note: "Retain. Already post-quantum."
+
+  # =======================================================
   # ASYMMETRIC — DIGITAL SIGNATURE
   # =======================================================
 
@@ -122,6 +143,62 @@ algorithms:
       DIGITAL_SIGNATURE:
         direction: SIGNATURE
         candidates: [ML-DSA-65, SLH-DSA-128s]
+
+  # =======================================================
+  # POST-QUANTUM - DIGITAL SIGNATURES (FIPS 204, FIPS 205)
+  # =======================================================
+
+  ML-DSA:
+    family: ML-DSA
+    aliases:
+      [
+        "ML-DSA-44",
+        "ML-DSA-65",
+        "ML-DSA-87",
+        "Dilithium",
+        "dilithium",
+        "ml-dsa",
+      ]
+    primitive_types: [DIGITAL_SIGNATURE]
+    variants: [ML-DSA-44, ML-DSA-65, ML-DSA-87]
+    classical_status:
+      status: STRONG
+      reason: "ML-DSA is a NIST-standardized signature scheme (FIPS 204)"
+    quantum_status:
+      status: RESILIENT
+      reason: "Lattice-based signature designed for post-quantum security"
+    recommendation:
+      DIGITAL_SIGNATURE:
+        direction: NO_ACTION
+        candidates: [ML-DSA-65, ML-DSA-87]
+        note: "Retain. Already post-quantum."
+
+  SLH-DSA:
+    family: SLH-DSA
+    aliases:
+      [
+        "SLH-DSA-128s",
+        "SLH-DSA-128f",
+        "SLH-DSA-192s",
+        "SLH-DSA-256s",
+        "SPHINCS+",
+        "SPHINCS",
+        "sphincs",
+        "slh-dsa",
+      ]
+    primitive_types: [DIGITAL_SIGNATURE]
+    variants: [SLH-DSA-128s, SLH-DSA-128f, SLH-DSA-192s, SLH-DSA-256s]
+    classical_status:
+      status: STRONG
+      reason: "SLH-DSA is a NIST-standardized hash-based signature (FIPS 205)"
+    quantum_status:
+      status: RESILIENT
+      reason: "Hash-based signature designed for post-quantum security"
+    recommendation:
+      DIGITAL_SIGNATURE:
+        direction: NO_ACTION
+        candidates: [SLH-DSA-128s, SLH-DSA-128f]
+        note: "Retain. Already post-quantum."
 
   # =======================================================
   # SYMMETRIC

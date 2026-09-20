@@ -45,8 +45,7 @@ const QUANTUM_SAFE_ALGOS = [
 ];
 
 function isQuantumSafe(f: Finding): boolean {
-  const a = f.algorithm.toUpperCase();
-  return QUANTUM_SAFE_ALGOS.some((safe) => a.includes(safe));
+  return f.quantumStatus === "SAFE";
 }
 
 export function countFindings(findings: Finding[]): GradeCounts {

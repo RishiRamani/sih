@@ -15,6 +15,7 @@ import type {
   DashboardSummary,
   CertificateDetails,
   MigrationEffort,
+  ExposureBucket,
 } from "@/lib/types";
 import type {
   BackendFinding,
@@ -232,32 +233,26 @@ function extractFromMetadata(metadata: Record<string, unknown> | undefined, key:
   return undefined;
 }
 
-function extractRiskLevel(intel: BackendIntelligenceAssessment | undefined): RiskLevel {
+export function extractRiskLevel(
+  intel: BackendIntelligenceAssessment | undefined
+): RiskLevel {
   if (!intel) return "LOW";
-  const risk = intel.risk_assessment?.risk ?? {};
-  const level =
-    (risk.level as string) ??
-    (risk.risk_level as string) ??
-    (risk.severity as string) ??
-    (intel.metadata?.risk_level as string);
-  if (!level) return "LOW";
-  const upper = String(level).toUpperCase();
+  const severity = intel.risk_assessment?.risk?.severity as string | undefined;
+  if (!severity) return "LOW";
+  const upper = severity.trim().toUpperCase();
   if (upper === "CRITICAL" || upper === "HIGH" || upper === "MEDIUM" || upper === "LOW") {
     return upper as RiskLevel;
   }
+  // INFORMATIONAL and anything unrecognized fall to LOW for UI purposes.
   return "LOW";
 }
 
 function extractRiskScore(intel: BackendIntelligenceAssessment | undefined): number {
   if (!intel) return 0;
-  const risk = intel.risk_assessment?.risk ?? {};
-  const score = (risk.score as number) ?? (risk.risk_score as number) ?? (risk.value as number);
+  const score = intel.risk_assessment?.risk?.risk_score;
   if (typeof score === "number") return Math.round(score);
-  // Fall back to level mapping
-  const level = extractRiskLevel(intel);
-  return { LOW: 20, MEDIUM: 50, HIGH: 75, CRITICAL: 92 }[level];
+  return { LOW: 20, MEDIUM: 50, HIGH: 75, CRITICAL: 92 }[extractRiskLevel(intel)];
 }
-
 function extractRiskExplanation(intel: BackendIntelligenceAssessment | undefined): string | undefined {
   if (!intel) return undefined;
   const risk = intel.risk_assessment?.risk ?? {};
@@ -269,17 +264,19 @@ function extractRiskExplanation(intel: BackendIntelligenceAssessment | undefined
   );
 }
 
-function extractClassicalStatus(intel: BackendIntelligenceAssessment | undefined): ExposureStatus {
+function extractClassicalStatus(
+  intel: BackendIntelligenceAssessment | undefined
+): ExposureStatus {
   if (!intel) return "UNKNOWN";
-  const classical = intel.risk_assessment?.classical ?? {};
-  const status = (classical.classical_status as string) ?? (classical.status as string) ?? (classical.assessment as string);
+  const status = intel.risk_assessment?.classical?.classical_status as string | undefined;
   return normalizeExposure(status);
 }
 
-function extractQuantumStatus(intel: BackendIntelligenceAssessment | undefined): ExposureStatus {
+function extractQuantumStatus(
+  intel: BackendIntelligenceAssessment | undefined
+): ExposureStatus {
   if (!intel) return "UNKNOWN";
-  const quantum = intel.risk_assessment?.quantum ?? {};
-  const status = (quantum.quantum_status as string) ?? (quantum.status as string) ?? (quantum.assessment as string);
+  const status = intel.risk_assessment?.quantum?.quantum_status as string | undefined;
   return normalizeExposure(status);
 }
 
@@ -313,6 +310,7 @@ export function toRecommendation(
     direction: normalizeDirection(r.direction),
     candidateAlgorithm: r.candidate_algorithms.join(", ") || "See rationale",
     priority: normalizePriority(r.migration_priority),
+    findingRiskLevel: extractRiskLevel(intel),
     status: normalizeRecommendationStatus(intel.metadata?.status as string | undefined),
     rationale: r.rationale,
     effort: normalizeMigrationEffort(r.effort),
@@ -361,12 +359,6 @@ export function toQuantumReadinessSummary(
   intel: BackendIntelligenceAssessment[],
   findings: Finding[]
 ): QuantumReadinessSummary {
-  const classicalExposure = distribution(
-    findings.filter((f) => f.classicalStatus === "WEAK" || f.classicalStatus === "BROKEN")
-  );
-  const quantumExposure = distribution(
-    findings.filter((f) => f.quantumStatus === "WEAK" || f.quantumStatus === "BROKEN")
-  );
   const prioritized = [...findings]
     .sort((a, b) => b.riskScore - a.riskScore)
     .slice(0, 10)
@@ -375,11 +367,31 @@ export function toQuantumReadinessSummary(
   return {
     crqcScenario:
       "Backend-supplied CRQC scenario — see individual risk assessments for reasoning",
+
     criticalCount: findings.filter((f) => f.riskLevel === "CRITICAL").length,
-    classicalExposure,
-    quantumExposure,
+
+    classicalExposure: exposureBuckets(findings, (f) => f.classicalStatus),
+    quantumExposure: exposureBuckets(findings, (f) => f.quantumStatus),
+
     prioritizedFindingIds: prioritized,
   };
+}
+
+function exposureBuckets(
+  findings: Finding[],
+  pick: (f: Finding) => ExposureStatus
+): ExposureBucket[] {
+  const statuses: ExposureStatus[] = [
+    "SAFE",
+    "WEAK",
+    "BROKEN",
+    "DEPRECATED",
+    "UNKNOWN",
+  ];
+  return statuses.map((status) => ({
+    status,
+    count: findings.filter((f) => pick(f) === status).length,
+  }));
 }
 
 function distribution(findings: Finding[]): RiskDistributionBucket[] {

@@ -16,6 +16,7 @@ import type {
   BackendScanResult,
   BackendFinding,
   BackendIntelligenceAssessment,
+  RiskLevel,
 } from "@/lib/types";
 import {
   toScan,
@@ -231,12 +232,17 @@ export class RealApiAdapter implements ApiClient {
   }
 
   async getRisk(scanId: string): Promise<QuantumReadinessSummary> {
+    // Use the dedicated /risk endpoint rather than re-deriving from the
+    // cached scan payload.
+    const intel = await request<BackendIntelligenceAssessment[]>(
+      `/scans/${scanId}/risk`
+    );
     const raw = await this.ensureScanLoaded(scanId);
     // Pass `raw` as context so relativeAssetPath can strip the base path
     const findings = raw.findings.map((f, idx) =>
-      toFinding(f, findIntelForFinding(raw.intelligence, idx, f), scanId, raw)
+      toFinding(f, findIntelForFinding(intel, idx, f), scanId, raw)
     );
-    return toQuantumReadinessSummary(raw.intelligence, findings);
+    return toQuantumReadinessSummary(intel, findings);
   }
 
   async updateFindingAssumptions(
@@ -263,15 +269,44 @@ export class RealApiAdapter implements ApiClient {
 
   async getRecommendations(scanId: string): Promise<Recommendation[]> {
     const raw = await this.ensureScanLoaded(scanId);
-    return raw.intelligence
-      .filter((i) => i.recommendation && i.recommendation.direction !== "NONE")
+
+    const recommendations = raw.intelligence
+      .filter(
+        (i) =>
+          i.recommendation &&
+          i.recommendation.direction !== "NONE" &&
+          i.recommendation.direction !== "NO_ACTION"
+      )
       .map((i) => {
         const finding = raw.findings[i.finding_index];
+
         const findingId = finding
           ? `${scanId}:${finding.asset_path}:${finding.line_start ?? 0}:${finding.algorithm ?? "unknown"}`
           : undefined;
-        return toRecommendation(i, scanId, i.algorithm ?? "Unknown", findingId);
+
+        return toRecommendation(
+          i,
+          scanId,
+          i.algorithm ?? "Unknown",
+          findingId
+        );
       });
+
+    const priorityRank: Record<RiskLevel, number> = {
+      CRITICAL: 4,
+      HIGH: 3,
+      MEDIUM: 2,
+      LOW: 1,
+    };
+
+    // Primary sort: risk of the underlying finding (what the user cares about).
+    // Secondary sort: migration priority (urgency).
+    return recommendations.sort((a, b) => {
+      const primary =
+        priorityRank[b.findingRiskLevel] - priorityRank[a.findingRiskLevel];
+      if (primary !== 0) return primary;
+      return priorityRank[b.priority] - priorityRank[a.priority];
+    });
   }
 
   async updateRecommendationStatus(
