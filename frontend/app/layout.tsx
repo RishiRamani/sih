@@ -2,6 +2,10 @@ import type { Metadata } from "next";
 import { ThemeProvider } from "@/components/theme/ThemeProvider";
 import { ToastProvider } from "@/components/ui/Toast";
 import "./globals.css";
+import { JetBrains_Mono, Inter } from "next/font/google";
+
+const mono = JetBrains_Mono({ subsets: ["latin"], variable: "--font-mono" });
+const app = Inter({ subsets: ["latin"], variable: "--font-app" });
 
 export const metadata: Metadata = {
   title: "Qrypta",
@@ -32,7 +36,7 @@ export default function RootLayout({
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
       </head>
-      <body>
+      <body className={`${app.variable} ${mono.variable}`}>
         <ThemeProvider>
           <ToastProvider>{children}</ToastProvider>
         </ThemeProvider>

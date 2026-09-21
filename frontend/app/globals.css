@@ -4,9 +4,9 @@
 
 :root {
   /* ─── Fonts — change these two lines to change the app font everywhere ─── */
-  --font-app: "JetBrains Mono", "IBM Plex Mono", ui-monospace, monospace;
---font-display: "JetBrains Mono", "IBM Plex Mono", ui-monospace, monospace;
-  --font-mono: var(--font-app);
+  --font-app: "Inter", system-ui, sans-serif;
+--font-display: "Inter", system-ui, sans-serif;
+--font-mono: "JetBrains Mono", ui-monospace, monospace;
 
   /* ─── Light palette (default) ───────────────────────────── */
   --color-base: 245 246 244;           /* #F5F6F4 main background */

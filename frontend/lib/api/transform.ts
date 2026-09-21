@@ -298,7 +298,9 @@ export function toRecommendation(
   intel: BackendIntelligenceAssessment,
   scanId: string,
   algorithmFallback: string,
-  findingId?: string
+  findingId?: string,
+  finding?: BackendFinding,          // NEW
+  targetPath?: string,               // NEW — for path stripping
 ): Recommendation {
   const r = intel.recommendation;
   return {
@@ -316,6 +318,11 @@ export function toRecommendation(
     effort: normalizeMigrationEffort(r.effort),
     tradeOffs: r.trade_offs || undefined,
     isExperimental: false,
+    // NEW:
+    sourcePath: finding ? relativeAssetPath(finding.asset_path, targetPath) : undefined,
+    lineStart: finding?.line_start ?? undefined,
+    lineEnd: finding?.line_end ?? undefined,
+    evidence: finding?.evidence ?? undefined,
   };
 }
 

@@ -278,19 +278,19 @@ export class RealApiAdapter implements ApiClient {
           i.recommendation.direction !== "NO_ACTION"
       )
       .map((i) => {
-        const finding = raw.findings[i.finding_index];
-
-        const findingId = finding
-          ? `${scanId}:${finding.asset_path}:${finding.line_start ?? 0}:${finding.algorithm ?? "unknown"}`
-          : undefined;
-
-        return toRecommendation(
-          i,
-          scanId,
-          i.algorithm ?? "Unknown",
-          findingId
-        );
-      });
+  const finding = raw.findings[i.finding_index];
+  const findingId = finding
+    ? `${scanId}:${finding.asset_path}:${finding.line_start ?? 0}:${finding.algorithm ?? "unknown"}`
+    : undefined;
+  return toRecommendation(
+    i,
+    scanId,
+    i.algorithm ?? "Unknown",
+    findingId,
+    finding,
+    raw.target_path,
+  );
+});
 
     const priorityRank: Record<RiskLevel, number> = {
       CRITICAL: 4,
@@ -310,22 +310,32 @@ export class RealApiAdapter implements ApiClient {
   }
 
   async updateRecommendationStatus(
-    scanId: string,
-    recommendationId: string,
-    status: Recommendation["status"]
-  ): Promise<Recommendation> {
-    const match = recommendationId.match(/^rec:.+:(\d+)$/);
-    if (!match) throw new ApiError(`Recommendation ${recommendationId} not found.`, 404);
-    const index = Number(match[1]);
-    const updated = await request<BackendIntelligenceAssessment>(`/scans/${scanId}/recommendations/${index}`, {
+  scanId: string,
+  recommendationId: string,
+  status: Recommendation["status"]
+): Promise<Recommendation> {
+  const match = recommendationId.match(/^rec:.+:(\d+)$/);
+  if (!match) throw new ApiError(`Recommendation ${recommendationId} not found.`, 404);
+  const index = Number(match[1]);
+  const updated = await request<BackendIntelligenceAssessment>(
+    `/scans/${scanId}/recommendations/${index}`,
+    {
       method: "PATCH",
       body: JSON.stringify({ status }),
-    });
-    const raw = await this.ensureScanLoaded(scanId);
-    raw.intelligence[index] = updated;
-    const finding = raw.findings[index];
-    return toRecommendation(updated, scanId, updated.algorithm ?? "Unknown", finding ? this.toFindingId(scanId, finding) : undefined);
-  }
+    }
+  );
+  const raw = await this.ensureScanLoaded(scanId);
+  raw.intelligence[index] = updated;
+  const finding = raw.findings[index];
+  return toRecommendation(
+    updated,
+    scanId,
+    updated.algorithm ?? "Unknown",
+    finding ? this.toFindingId(scanId, finding) : undefined,
+    finding,              // NEW
+    raw.target_path,      // NEW
+  );
+}
 
   async getReport(scanId: string): Promise<ReportResponse> {
     const raw = await this.ensureScanLoaded(scanId);

@@ -34,13 +34,6 @@ const STATUS_LABEL: Record<Recommendation["status"], string> = {
   ACCEPTED_RISK: "Accepted risk"
 };
 
-const rank: Record<string, number> = {
-  CRITICAL: 4,
-  HIGH: 3,
-  MEDIUM: 2,
-  LOW: 1,
-};
-
 const STATUS_STYLE: Record<Recommendation["status"], string> = {
   NOT_STARTED: "bg-text-secondary/10 text-text-secondary border-border",
   IN_PROGRESS: "bg-accent/10 text-accent border-accent/30",
@@ -94,83 +87,107 @@ export default function RecommendationsPage({ params }: { params: { scanId: stri
 
       {items.length > 0 ? (
         <div className="space-y-3">
-          {[...items]
-  .sort((a, b) => {
-  console.log("priorities:", a.priority, b.priority, rank[a.priority], rank[b.priority]);
-  return (rank[b.priority] ?? 0) - (rank[a.priority] ?? 0);
-})
+          {items.map((rec) => (
+            <div className="rounded-md border border-border bg-surface p-4 shadow-subtle">
+  <div className="flex flex-wrap items-start justify-between gap-3">
+    <div>
+      <div className="flex items-center gap-2">
+        <h3 className="font-display text-sm font-semibold tracking-tight text-text-primary">
+          {rec.currentTechnology}
+        </h3>
+        <RiskBadge level={rec.priority} />
+        {rec.findingRiskLevel && rec.findingRiskLevel !== rec.priority ? (
+          <span className="rounded border border-border bg-surface-muted px-1.5 py-0.5 font-mono text-[10px] font-medium uppercase tracking-wide text-text-secondary">
+            Finding risk: {rec.findingRiskLevel}
+          </span>
+        ) : null}
+        {rec.isExperimental ? (
+          <span className="rounded border border-amber/30 bg-amber/10 px-1.5 py-0.5 font-mono text-[10px] font-medium uppercase tracking-wide text-amber">
+            Experimental candidate
+          </span>
+        ) : null}
+      </div>
+      <p className="mt-0.5 text-xs text-text-secondary">
+        Affects: {rec.affectedComponents.join(", ")}
+      </p>
+    </div>
+    <select
+      value={rec.status}
+      disabled={updating === rec.id}
+      onChange={(e) => handleStatusChange(rec, e.target.value as Recommendation["status"])}
+      className={cn(
+        "rounded border px-2 py-1 text-xs font-medium disabled:opacity-60",
+        STATUS_STYLE[rec.status]
+      )}
+    >
+      {Object.entries(STATUS_LABEL).map(([value, label]) => (
+        <option key={value} value={value}>
+          {label}
+        </option>
+      ))}
+    </select>
+  </div>
 
-    
+  <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+    <div>
+      <div className="text-xs font-medium text-text-secondary">Why migration is needed</div>
+      <p className="mt-0.5 text-sm text-text-primary">{rec.reason}</p>
+    </div>
+    <div>
+      <div className="text-xs font-medium text-text-secondary">Recommended direction</div>
+      <p className="mt-0.5 text-sm text-text-primary">
+        {DIRECTION_LABEL[rec.direction] ?? rec.direction} —{" "}
+        <span className="font-mono text-xs text-text-secondary">{rec.candidateAlgorithm}</span>
+      </p>
+    </div>
+    <div>
+      <div className="text-xs font-medium text-text-secondary">Rationale</div>
+      <p className="mt-0.5 text-sm text-text-primary">{rec.rationale}</p>
+    </div>
+    <div>
+      <div className="text-xs font-medium text-text-secondary">Effort / trade-offs</div>
+      <p className="mt-0.5 text-sm text-text-primary">
+        <span className="font-mono text-xs uppercase tracking-wide">{effortLabel(rec.effort)}</span>
+        {rec.tradeOffs ? ` — ${rec.tradeOffs}` : ""}
+      </p>
+    </div>
+  </div>
 
+  {rec.sourcePath || rec.evidence ? (
+    <div className="mt-3 rounded border border-border bg-surface-muted/40 p-3">
+      <div className="text-xs font-medium text-text-secondary">Detected at</div>
+      <div className="mt-0.5 flex flex-wrap items-baseline gap-2 text-xs">
+        <span className="font-mono text-text-primary">
+          {rec.sourcePath ?? "unknown file"}
+        </span>
+        {rec.lineStart ? (
+          <span className="font-mono text-text-secondary">
+            line {rec.lineStart}
+            {rec.lineEnd && rec.lineEnd !== rec.lineStart ? `–${rec.lineEnd}` : ""}
+          </span>
+        ) : null}
+      </div>
+      {rec.evidence ? (
+        <pre className="mt-2 overflow-x-auto rounded border border-border bg-surface p-2 text-xs font-mono">
+          <span className="select-none text-text-secondary">
+            {rec.lineStart ? `${rec.lineStart}: ` : ""}
+          </span>
+          <span className="text-highlight">{rec.evidence}</span>
+        </pre>
+      ) : null}
+    </div>
+  ) : null}
 
-  .map((rec) => (
-            <div key={rec.id} className="rounded-md border border-border bg-surface p-4 shadow-subtle">
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h3 className="text-sm font-semibold text-text-primary">{rec.currentTechnology}</h3>
-                    <RiskBadge level={rec.priority} />
-                    {rec.isExperimental ? (
-                      <span className="rounded border border-amber/30 bg-amber/10 px-1.5 py-0.5 text-[10px] font-medium text-amber">
-                        Experimental candidate
-                      </span>
-                    ) : null}
-                  </div>
-                  <p className="mt-0.5 text-xs text-text-secondary">
-                    Affects: {rec.affectedComponents.join(", ")}
-                  </p>
-                </div>
-                <select
-                  value={rec.status}
-                  disabled={updating === rec.id}
-                  onChange={(e) => handleStatusChange(rec, e.target.value as Recommendation["status"])}
-                  className={cn(
-                    "rounded border px-2 py-1 text-xs font-medium disabled:opacity-60",
-                    STATUS_STYLE[rec.status]
-                  )}
-                >
-                  {Object.entries(STATUS_LABEL).map(([value, label]) => (
-                    <option key={value} value={value}>
-                      {label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <div>
-                  <div className="text-xs font-medium text-text-secondary">Why migration is needed</div>
-                  <p className="mt-0.5 text-sm text-text-primary">{rec.reason}</p>
-                </div>
-                <div>
-                  <div className="text-xs font-medium text-text-secondary">Recommended direction</div>
-                  <p className="mt-0.5 text-sm text-text-primary">
-                    {DIRECTION_LABEL[rec.direction] ?? rec.direction} — <span className="text-text-secondary">{rec.candidateAlgorithm}</span>
-                  </p>
-                </div>
-                <div>
-                  <div className="text-xs font-medium text-text-secondary">Rationale</div>
-                  <p className="mt-0.5 text-sm text-text-primary">{rec.rationale}</p>
-                </div>
-                <div>
-                  <div className="text-xs font-medium text-text-secondary">Effort / trade-offs</div>
-                  <p className="mt-0.5 text-sm text-text-primary">
-                    {effortLabel(rec.effort)}
-                    {rec.tradeOffs ? ` — ${rec.tradeOffs}` : ""}
-                  </p>
-                </div>
-              </div>
-
-              <Link
-                href={`/scans/${scanId}/findings/${encodeURIComponent(rec.findingId)}`}
-                className="mt-3 inline-block text-xs font-medium text-accent hover:underline"
-              >
-                View underlying finding →
-              </Link>
-            </div>
+  <Link
+    href={`/scans/${scanId}/findings/${encodeURIComponent(rec.findingId)}`}
+    className="mt-3 inline-block text-xs font-medium text-accent hover:underline"
+  >
+    View underlying finding →
+  </Link>
+</div>
           ))}
         </div>
-       ) : null}
+      ) : null}
     </AppShell>
   );
 }

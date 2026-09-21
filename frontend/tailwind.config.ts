@@ -45,10 +45,10 @@ const config: Config = {
         crimson: "rgb(var(--color-danger) / <alpha-value>)",
       },
       fontFamily: {
-        sans: ["var(--font-app)", "system-ui", "sans-serif"],
-  mono: ["var(--font-app)", "ui-monospace", "monospace"],
+  sans: ["var(--font-app)", "system-ui", "sans-serif"],
+  mono: ["var(--font-mono)", "ui-monospace", "SFMono-Regular", "Menlo", "Consolas", "monospace"],
   display: ["var(--font-display)", "system-ui", "sans-serif"],
-      },
+},
       borderRadius: {
         DEFAULT: "4px",
         md: "5px",

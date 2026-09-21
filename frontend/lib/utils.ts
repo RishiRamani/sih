@@ -28,11 +28,16 @@ export function formatDuration(startIso?: string, endIso?: string): string {
   return `${m}m ${rem}s`;
 }
 
-export const RISK_LABEL: Record<RiskLevel, string> = {
+export const RISK_LABEL: Record<string, string> = {
   LOW: "Low",
   MEDIUM: "Medium",
   HIGH: "High",
-  CRITICAL: "Critical"
+  CRITICAL: "Critical",
+  SAFE: "Safe",
+  WEAK: "Weak",
+  BROKEN: "Broken",
+  DEPRECATED: "Deprecated",
+  UNKNOWN: "Unknown",
 };
 
 export const CONFIDENCE_LABEL: Record<Confidence, string> = {

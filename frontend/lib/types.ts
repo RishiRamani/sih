@@ -143,6 +143,10 @@ export interface Recommendation {
   effort?: MigrationEffort;
   tradeOffs?: string;
   isExperimental?: boolean;
+  sourcePath?: string;
+  lineStart?: number;
+  lineEnd?: number;
+  evidence?: string;
 }
 
 // A normalized cryptographic artefact — the canonical finding model.
