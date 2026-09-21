@@ -85,7 +85,7 @@ export function AppNav() {
           </span>
           <div className="flex flex-col leading-none">
             <span className="font-mono text-[15px] font-semibold tracking-[0.18em] text-text-primary">
-              ECDAT
+              Qrypta
             </span>
             <span className="mt-0.5 font-mono text-[8px] uppercase tracking-[0.2em] text-text-secondary">
               Cryptographic Inventory

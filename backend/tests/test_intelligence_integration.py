@@ -114,7 +114,7 @@ def print_case(title, finding_desc, results):
 def main():
     print()
     print("#" * 78)
-    print("# ECDAT Intelligence Layer Demonstration")
+    print("# Qrypta Intelligence Layer Demonstration")
     print("#" * 78)
     print()
 

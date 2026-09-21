@@ -4,7 +4,7 @@ import { ToastProvider } from "@/components/ui/Toast";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "ECDAT — Enterprise Cryptographic Discovery & Analysis Tool",
+  title: "Qrypta",
   description:
     "Cryptographic inventory, CBOM, and quantum-readiness risk assessment for enterprise software assets.",
 };

@@ -36,7 +36,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
       headers: { "Content-Type": "application/json", ...(init?.headers ?? {}) },
     });
   } catch {
-    throw new ApiError(`Could not reach ECDAT backend at ${BASE_URL}${path}.`);
+    throw new ApiError(`Could not reach Qrypta backend at ${BASE_URL}${path}.`);
   }
   if (!res.ok) {
     let message = `Request to ${path} failed with status ${res.status}.`;

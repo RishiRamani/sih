@@ -92,7 +92,7 @@ export default function NewScanPage() {
             Start a new scan
           </h2>
           <p className="mt-1 text-[13px] leading-relaxed text-text-secondary">
-            ECDAT discovers cryptographic usage across the asset you provide, then normalizes
+            Qrypta discovers cryptographic usage across the asset you provide, then normalizes
             findings into a CBOM and risk assessment. Analysis, detection, and risk scoring all
             happen on the backend.
           </p>

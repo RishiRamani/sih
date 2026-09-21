@@ -37,7 +37,7 @@ int main() {
     const char* sha1 = "SHA1";
     const char* md5 = "MD5";
 
-    std::cout << "ECDAT binary scanner demo\n";
+    std::cout << "Qrypta binary scanner demo\n";
 
     std::cout << lib1 << "\n";
     std::cout << lib2 << "\n";

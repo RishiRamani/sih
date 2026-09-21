@@ -20,7 +20,7 @@ export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
       <div className="border-b border-rule px-5 py-6">
         <div className="flex items-baseline gap-2">
           <span className="font-mono text-[17px] font-semibold tracking-[0.22em] text-accent">
-            ECDAT
+            Qrypta
           </span>
         </div>
         <p className="mt-1.5 font-mono text-[9px] uppercase tracking-[0.22em] text-text-dim">

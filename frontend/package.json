@@ -1,8 +1,8 @@
 {
-  "name": "ecdat-frontend",
+  "name": "qrypta-frontend",
   "version": "0.1.0",
   "private": true,
-  "description": "ECDAT — Enterprise Cryptographic Discovery & Analysis Tool (frontend). SIH26164.",
+  "description": "Qrypta (frontend). SIH26164.",
   "scripts": {
     "dev": "next dev",
     "build": "next build",

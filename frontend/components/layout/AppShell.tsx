@@ -25,7 +25,7 @@ export function AppShell({
       <footer className="border-t border-rule">
         <div className="mx-auto flex max-w-[1400px] items-center justify-between px-6 py-4 md:px-8">
           <span className="font-mono text-[10px] uppercase tracking-[0.15em] text-text-dim">
-            ECDAT · SIH26164
+            Qrypta · SIH26164
           </span>
           <span className="font-mono text-[10px] uppercase tracking-[0.15em] text-text-dim">
             build v1.2.6
