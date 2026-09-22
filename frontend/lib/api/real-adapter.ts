@@ -26,7 +26,7 @@ import {
   computeDashboardSummary,
 } from "./transform";
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
+const BASE_URL = process.env.API_BASE_URL ?? "http://localhost:8000";
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   let res: Response;
