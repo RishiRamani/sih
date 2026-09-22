@@ -1,40 +1,44 @@
-import sqlite3
-from pathlib import Path
+# backend/persistence/database.py
+from pymongo import MongoClient, DESCENDING
+from pymongo.collection import Collection
+
+from ..core.config import settings
 
 
-DB_PATH = Path("backend/data/ecdat.db")
+_client: MongoClient | None = None
 
 
-def get_connection() -> sqlite3.Connection:
-    """
-    Create a SQLite connection for the ECDAT database.
-    """
-    DB_PATH.parent.mkdir(parents=True, exist_ok=True)
+def get_client() -> MongoClient:
+    """Return the process-wide MongoClient (lazy singleton)."""
+    global _client
+    if _client is None:
+        _client = MongoClient(
+            settings.MONGO_URI,
+            serverSelectionTimeoutMS=5000,
+        )
+    return _client
 
-    connection = sqlite3.connect(DB_PATH)
-    connection.row_factory = sqlite3.Row
 
-    return connection
+def get_collection() -> Collection:
+    """Return the scans collection."""
+    return get_client()[settings.MONGO_DB_NAME][settings.MONGO_COLLECTION]
 
 
 def initialize_database() -> None:
     """
-    Create the persistence schema if it does not already exist.
+    Ensure the scans collection and required indexes exist.
+    Called once on import (mirrors old sqlite behaviour).
     """
-    with get_connection() as connection:
-        connection.execute(
-            """
-            CREATE TABLE IF NOT EXISTS scans (
-                scan_id TEXT PRIMARY KEY,
-                target_path TEXT NOT NULL,
-                status TEXT NOT NULL,
-                result_json TEXT NOT NULL,
-                created_at TEXT NOT NULL
-            )
-            """
-        )
+    collection = get_collection()
 
-        connection.commit()
+    # Unique scan_id (matches the old PRIMARY KEY semantics)
+    collection.create_index("scan_id", unique=True)
+
+    # Newest-first listing (matches old ORDER BY created_at DESC)
+    collection.create_index([("created_at", DESCENDING)])
+
+    # Status queries (used by future scan-list filters)
+    collection.create_index([("status", 1), ("created_at", DESCENDING)])
 
 
 initialize_database()

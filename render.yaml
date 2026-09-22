@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: ecdat-backend
+    runtime: python
+    buildCommand: "pip install -r backend/requirements.txt"
+    startCommand: "uvicorn backend.main:app --host 0.0.0.0 --port $PORT"
+    envVars:
+      - key: MONGO_URI
+        sync: false   # you'll set this manually in the dashboard
+      - key: MONGO_DB_NAME
+        value: ecdat
+      - key: PYTHON_VERSION
+        value: 3.12.4

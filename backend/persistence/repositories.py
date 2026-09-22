@@ -1,22 +1,20 @@
+# backend/persistence/repositories.py
 from datetime import datetime
 from pathlib import Path
 from uuid import uuid4
 
 from ..schemas.scan import ScanResult
 from ..scanners.source.file_enumerator import enumerate_source_files
-from .database import get_connection
+from .database import get_collection
 
 
 class ScanRepository:
     """
     Persistence operations for scan results.
+    Backed by MongoDB; stores each ScanResult as one document.
     """
 
     def create(self, result: ScanResult) -> ScanResult:
-        """
-        Persist a completed scan and assign a scan ID if needed.
-        """
-
         scan_id = result.scan_id or str(uuid4())
         result.scan_id = scan_id
 
@@ -30,53 +28,34 @@ class ScanRepository:
         if result.completed_at is None and result.status.value == "completed":
             result.completed_at = created_at
 
-        result_json = result.model_dump_json()
+        document = {
+            "scan_id": scan_id,
+            "target_path": result.target_path,
+            "status": result.status.value,
+            "created_at": created_at,
+            "result_json": result.model_dump(mode="json"),
+        }
 
-        with get_connection() as connection:
-            connection.execute(
-                """
-                INSERT OR REPLACE INTO scans (
-                    scan_id,
-                    target_path,
-                    status,
-                    result_json,
-                    created_at
-                )
-                VALUES (?, ?, ?, ?, ?)
-                """,
-                (
-                    scan_id,
-                    result.target_path,
-                    result.status.value,
-                    result_json,
-                    created_at.isoformat(),
-                ),
-            )
-
-            connection.commit()
+        collection = get_collection()
+        collection.replace_one(
+            {"scan_id": scan_id},
+            document,
+            upsert=True,
+        )
 
         return result
 
     def get(self, scan_id: str) -> ScanResult | None:
-        """
-        Retrieve a scan by ID.
-        """
-
-        with get_connection() as connection:
-            row = connection.execute(
-                """
-                SELECT result_json, created_at
-                FROM scans
-                WHERE scan_id = ?
-                """,
-                (scan_id,),
-            ).fetchone()
+        row = get_collection().find_one(
+            {"scan_id": scan_id},
+            {"_id": 0},
+        )
 
         if row is None:
             return None
 
         result = _attach_persisted_timestamp(
-            ScanResult.model_validate_json(row["result_json"]),
+            ScanResult.model_validate(row["result_json"]),
             row["created_at"],
         )
         return _repair_legacy_coverage(result)
@@ -84,57 +63,44 @@ class ScanRepository:
     def update(self, result: ScanResult) -> ScanResult:
         if not result.scan_id:
             raise ValueError("Cannot update a scan without a scan ID")
-        with get_connection() as connection:
-            cursor = connection.execute(
-                "UPDATE scans SET result_json = ?, status = ? WHERE scan_id = ?",
-                (result.model_dump_json(), result.status.value, result.scan_id),
-            )
-            connection.commit()
-        if cursor.rowcount == 0:
+
+        update = {
+            "$set": {
+                "result_json": result.model_dump(mode="json"),
+                "status": result.status.value,
+            }
+        }
+
+        outcome = get_collection().update_one(
+            {"scan_id": result.scan_id},
+            update,
+        )
+
+        if outcome.matched_count == 0:
             raise KeyError(result.scan_id)
+
         return result
 
     def list(self) -> list[ScanResult]:
-        """
-        Retrieve all scans, newest first.
-        """
-
-        with get_connection() as connection:
-            rows = connection.execute(
-                """
-                SELECT result_json, created_at
-                FROM scans
-                ORDER BY created_at DESC
-                """
-            ).fetchall()
+        cursor = (
+            get_collection()
+            .find({}, {"_id": 0})
+            .sort("created_at", -1)
+        )
 
         return [
             _repair_legacy_coverage(
                 _attach_persisted_timestamp(
-                    ScanResult.model_validate_json(row["result_json"]),
+                    ScanResult.model_validate(row["result_json"]),
                     row["created_at"],
                 )
             )
-            for row in rows
+            for row in cursor
         ]
 
     def delete(self, scan_id: str) -> bool:
-        """
-        Delete a stored scan.
-        """
-
-        with get_connection() as connection:
-            cursor = connection.execute(
-                """
-                DELETE FROM scans
-                WHERE scan_id = ?
-                """,
-                (scan_id,),
-            )
-
-            connection.commit()
-
-        return cursor.rowcount > 0
+        outcome = get_collection().delete_one({"scan_id": scan_id})
+        return outcome.deleted_count > 0
 
 
 def _repair_legacy_coverage(result: ScanResult) -> ScanResult:
@@ -162,10 +128,13 @@ def _repair_legacy_coverage(result: ScanResult) -> ScanResult:
 scan_repository = ScanRepository()
 
 
-def _attach_persisted_timestamp(result: ScanResult, created_at: str) -> ScanResult:
+def _attach_persisted_timestamp(
+    result: ScanResult,
+    created_at: datetime,
+) -> ScanResult:
     """Expose the database creation time for legacy JSON scan results."""
     if result.started_at is None:
-        result.started_at = datetime.fromisoformat(created_at)
+        result.started_at = created_at
     if result.completed_at is None and result.status.value == "completed":
         result.completed_at = result.started_at
     return result
