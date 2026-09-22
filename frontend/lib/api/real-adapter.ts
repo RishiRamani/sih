@@ -26,7 +26,7 @@ import {
   computeDashboardSummary,
 } from "./transform";
 
-const BASE_URL = process.env.API_BASE_URL ?? "http://localhost:8000";
+const BASE_URL = process.env.API_BASE_URL ?? "https://qrypta.onrender.com";
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   let res: Response;
