@@ -119,7 +119,7 @@ export default function FindingsPage({ params }: { params: { scanId: string } })
 
       <div className="mb-4 flex justify-end">
         <a
-          href={`${process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000"}/scans/${scanId}/report?format=html`}
+          href={`${process.env.API_BASE_URL ?? "http://localhost:8000"}/scans/${scanId}/report?format=html`}
           download={`ecdat-${scanId}.html`}
           className="inline-flex items-center gap-2 rounded border border-border bg-surface px-3 py-2 text-xs font-medium text-text-primary hover:border-accent hover:text-accent"
         >

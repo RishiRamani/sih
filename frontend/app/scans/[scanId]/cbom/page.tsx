@@ -142,7 +142,7 @@ export default function CbomPage({ params }: { params: { scanId: string } }) {
             </div>
             <Button
               variant="secondary"
-              onClick={() => window.open(`${process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000"}/scans/${scanId}/report?format=html`, "_blank", "noopener,noreferrer")}
+              onClick={() => window.open(`${process.env.API_BASE_URL ?? "http://localhost:8000"}/scans/${scanId}/report?format=html`, "_blank", "noopener,noreferrer")}
             >
               <Download size={14} />
               Export report
