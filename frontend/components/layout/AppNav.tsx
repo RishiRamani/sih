@@ -14,7 +14,6 @@ import {
   GitCompareArrows,
 } from "lucide-react";
 import { useTheme } from "@/components/theme/ThemeProvider";
-import { isMockApi } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { listComparisons } from "@/lib/comparisons";
 
@@ -135,17 +134,7 @@ export function AppNav() {
 
         {/* Right cluster */}
         <div className="ml-auto flex items-center gap-3">
-          {/* {isMockApi ? (
-            <span className="hidden items-center gap-1.5 rounded border border-amber/40 bg-amber-soft px-2.5 py-1 font-mono text-[9px] font-semibold uppercase tracking-[0.15em] text-amber sm:inline-flex">
-              <FlaskConical size={10} />
-              Mock
-            </span>
-          ) : (
-            <span className="hidden items-center gap-1.5 font-mono text-[9px] uppercase tracking-[0.15em] text-text-secondary sm:inline-flex">
-              <Activity size={10} className="text-safe" />
-              Live
-            </span>
-          )} */}
+          
 
           <span className="hidden h-5 w-px bg-border sm:block" />
 
