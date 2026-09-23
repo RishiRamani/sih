@@ -9,7 +9,6 @@ _client: MongoClient | None = None
 
 
 def get_client() -> MongoClient:
-    """Return the process-wide MongoClient (lazy singleton)."""
     global _client
     if _client is None:
         _client = MongoClient(
@@ -30,10 +29,6 @@ def get_users_collection() -> Collection:
 
 
 def initialize_database() -> None:
-    """
-    Ensure collections and required indexes exist.
-    Runs at import time.
-    """
     scans = get_collection()
     users = get_users_collection()
 

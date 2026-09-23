@@ -1,22 +1,50 @@
 # backend/tests/test_scan_auth.py
 """
 Scan endpoints require auth, and each user only sees their own scans.
-Uses a throwaway Mongo database (see conftest.py).
+Email sending is monkeypatched so tests never call Resend.
 """
 
+import pytest
 
-def _register(api_client, email: str) -> str:
-    resp = api_client.post(
+
+@pytest.fixture(autouse=True)
+def stub_email(monkeypatch):
+    captured: dict[str, str] = {}
+
+    def fake_send(to_email: str, otp: str) -> None:
+        captured[to_email] = otp
+
+    from backend.auth import email as email_module
+    monkeypatch.setattr(email_module, "send_otp_email", fake_send)
+
+    from backend.auth import routes as routes_module
+    monkeypatch.setattr(routes_module, "send_otp_email", fake_send)
+
+    return captured
+
+
+def _register_and_verify(api_client, stub_email, email: str) -> str:
+    """Register, grab the OTP, verify, return the JWT."""
+    api_client.post(
         "/auth/register",
         json={"email": email, "password": "testpass123"},
     )
-    assert resp.status_code == 201, resp.text
+    otp = stub_email[email]
+    resp = api_client.post(
+        "/auth/verify-otp",
+        json={"email": email, "otp": otp},
+    )
+    assert resp.status_code == 200, resp.text
     return resp.json()["token"]
 
 
 def _auth(token: str) -> dict:
     return {"Authorization": f"Bearer {token}"}
 
+
+# ----------------------------------------------------------------------
+# Auth required
+# ----------------------------------------------------------------------
 
 def test_list_scans_requires_auth(api_client):
     resp = api_client.get("/scans")
@@ -34,18 +62,21 @@ def test_create_scan_requires_auth(api_client):
     assert resp.status_code == 401
 
 
-def test_new_user_sees_empty_scan_list(api_client):
-    token = _register(api_client, "newuser@test.com")
+def test_new_user_sees_empty_scan_list(api_client, stub_email):
+    token = _register_and_verify(api_client, stub_email, "empty@test.com")
     resp = api_client.get("/scans", headers=_auth(token))
     assert resp.status_code == 200
     assert resp.json() == []
 
 
-def test_scan_is_visible_only_to_owner(api_client):
-    alice = _register(api_client, "owner-a@test.com")
-    bob = _register(api_client, "owner-b@test.com")
+# ----------------------------------------------------------------------
+# Ownership
+# ----------------------------------------------------------------------
 
-    # Alice creates a scan
+def test_scan_is_visible_only_to_owner(api_client, stub_email):
+    alice = _register_and_verify(api_client, stub_email, "owner-a@test.com")
+    bob = _register_and_verify(api_client, stub_email, "owner-b@test.com")
+
     create = api_client.post(
         "/scans",
         headers=_auth(alice),
@@ -57,24 +88,21 @@ def test_scan_is_visible_only_to_owner(api_client):
     assert create.status_code == 200, create.text
     scan_id = create.json()["scan_id"]
 
-    # Alice sees it
     alice_list = api_client.get("/scans", headers=_auth(alice))
     assert alice_list.status_code == 200
     assert any(s["scan_id"] == scan_id for s in alice_list.json())
 
-    # Bob does not
     bob_list = api_client.get("/scans", headers=_auth(bob))
     assert bob_list.status_code == 200
     assert all(s["scan_id"] != scan_id for s in bob_list.json())
 
-    # Bob gets 404 on Alice's scan by ID
     resp = api_client.get(f"/scans/{scan_id}", headers=_auth(bob))
     assert resp.status_code == 404
 
 
-def test_scan_findings_scoped_to_owner(api_client):
-    alice = _register(api_client, "find-a@test.com")
-    bob = _register(api_client, "find-b@test.com")
+def test_scan_findings_scoped_to_owner(api_client, stub_email):
+    alice = _register_and_verify(api_client, stub_email, "find-a@test.com")
+    bob = _register_and_verify(api_client, stub_email, "find-b@test.com")
 
     create = api_client.post(
         "/scans",
@@ -86,18 +114,16 @@ def test_scan_findings_scoped_to_owner(api_client):
     ).json()
     scan_id = create["scan_id"]
 
-    # Alice can read findings
     resp = api_client.get(f"/scans/{scan_id}/findings", headers=_auth(alice))
     assert resp.status_code == 200
 
-    # Bob cannot
     resp = api_client.get(f"/scans/{scan_id}/findings", headers=_auth(bob))
     assert resp.status_code == 404
 
 
-def test_scan_delete_scoped_to_owner(api_client):
-    alice = _register(api_client, "del-a@test.com")
-    bob = _register(api_client, "del-b@test.com")
+def test_scan_delete_scoped_to_owner(api_client, stub_email):
+    alice = _register_and_verify(api_client, stub_email, "del-a@test.com")
+    bob = _register_and_verify(api_client, stub_email, "del-b@test.com")
 
     create = api_client.post(
         "/scans",
@@ -109,22 +135,19 @@ def test_scan_delete_scoped_to_owner(api_client):
     ).json()
     scan_id = create["scan_id"]
 
-    # Bob cannot delete
     resp = api_client.delete(f"/scans/{scan_id}", headers=_auth(bob))
     assert resp.status_code == 404
 
-    # Alice can
     resp = api_client.delete(f"/scans/{scan_id}", headers=_auth(alice))
     assert resp.status_code == 200
 
-    # After deletion, gone
     resp = api_client.get(f"/scans/{scan_id}", headers=_auth(alice))
     assert resp.status_code == 404
 
 
-def test_cbom_risk_and_recommendations_scoped_to_owner(api_client):
-    alice = _register(api_client, "sub-a@test.com")
-    bob = _register(api_client, "sub-b@test.com")
+def test_cbom_risk_and_recommendations_scoped_to_owner(api_client, stub_email):
+    alice = _register_and_verify(api_client, stub_email, "sub-a@test.com")
+    bob = _register_and_verify(api_client, stub_email, "sub-b@test.com")
 
     create = api_client.post(
         "/scans",
@@ -137,10 +160,8 @@ def test_cbom_risk_and_recommendations_scoped_to_owner(api_client):
     scan_id = create["scan_id"]
 
     for path in ("cbom", "risk", "recommendations", "report"):
-        # Alice: 200 (or 404 for cbom if not generated — still, no auth error)
         alice_resp = api_client.get(f"/scans/{scan_id}/{path}", headers=_auth(alice))
         assert alice_resp.status_code in (200, 404), alice_resp.text
 
-        # Bob: 404 for all
         bob_resp = api_client.get(f"/scans/{scan_id}/{path}", headers=_auth(bob))
         assert bob_resp.status_code == 404, f"{path}: {bob_resp.text}"

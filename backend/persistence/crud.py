@@ -27,8 +27,8 @@ def update_scan(result: ScanResult) -> ScanResult:
 
 # ---- Users ----
 
-def create_user(email: str, password_hash: str) -> dict:
-    return user_repository.create(email=email, password_hash=password_hash)
+def create_pending_user(email: str, password_hash: str, otp_hash: str) -> dict:
+    return user_repository.create_pending(email, password_hash, otp_hash)
 
 
 def get_user_by_id(user_id: str) -> dict | None:
@@ -37,6 +37,18 @@ def get_user_by_id(user_id: str) -> dict | None:
 
 def get_user_by_email(email: str) -> dict | None:
     return user_repository.get_by_email(email)
+
+
+def update_user_otp(user_id: str, otp_hash: str) -> None:
+    user_repository.update_otp(user_id, otp_hash)
+
+
+def increment_otp_attempts(user_id: str) -> int:
+    return user_repository.increment_otp_attempts(user_id)
+
+
+def mark_user_verified(user_id: str) -> None:
+    user_repository.mark_verified(user_id)
 
 
 def update_user_last_login(user_id: str) -> None:
