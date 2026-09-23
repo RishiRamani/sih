@@ -20,25 +20,32 @@ def get_client() -> MongoClient:
 
 
 def get_collection() -> Collection:
-    """Return the scans collection."""
+    """Scans collection."""
     return get_client()[settings.MONGO_DB_NAME][settings.MONGO_COLLECTION]
+
+
+def get_users_collection() -> Collection:
+    """Users collection."""
+    return get_client()[settings.MONGO_DB_NAME][settings.MONGO_USERS_COLLECTION]
 
 
 def initialize_database() -> None:
     """
-    Ensure the scans collection and required indexes exist.
-    Called once on import (mirrors old sqlite behaviour).
+    Ensure collections and required indexes exist.
+    Runs at import time.
     """
-    collection = get_collection()
+    scans = get_collection()
+    users = get_users_collection()
 
-    # Unique scan_id (matches the old PRIMARY KEY semantics)
-    collection.create_index("scan_id", unique=True)
+    # ---- scans ----
+    scans.create_index("scan_id", unique=True)
+    scans.create_index([("created_at", DESCENDING)])
+    scans.create_index([("status", 1), ("created_at", DESCENDING)])
+    scans.create_index([("owner_id", 1), ("created_at", DESCENDING)])
 
-    # Newest-first listing (matches old ORDER BY created_at DESC)
-    collection.create_index([("created_at", DESCENDING)])
-
-    # Status queries (used by future scan-list filters)
-    collection.create_index([("status", 1), ("created_at", DESCENDING)])
+    # ---- users ----
+    users.create_index("user_id", unique=True)
+    users.create_index("email_lower", unique=True)
 
 
 initialize_database()

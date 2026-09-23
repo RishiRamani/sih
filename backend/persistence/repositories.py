@@ -5,16 +5,71 @@ from uuid import uuid4
 
 from ..schemas.scan import ScanResult
 from ..scanners.source.file_enumerator import enumerate_source_files
-from .database import get_collection
+from .database import get_collection, get_users_collection
 
+
+# ----------------------------------------------------------------------
+# Users
+# ----------------------------------------------------------------------
+
+class UserRepository:
+    """Persistence operations for user accounts."""
+
+    def create(
+        self,
+        email: str,
+        password_hash: str,
+        user_id: str | None = None,
+    ) -> dict:
+        user_id = user_id or f"usr_{uuid4().hex[:12]}"
+        now = datetime.utcnow()
+
+        document = {
+            "user_id": user_id,
+            "email": email,
+            "email_lower": email.lower(),
+            "password_hash": password_hash,
+            "created_at": now,
+            "last_login_at": None,
+        }
+
+        users = get_users_collection()
+        users.insert_one(document)
+        return document
+
+    def get_by_id(self, user_id: str) -> dict | None:
+        return get_users_collection().find_one(
+            {"user_id": user_id},
+            {"_id": 0},
+        )
+
+    def get_by_email(self, email: str) -> dict | None:
+        return get_users_collection().find_one(
+            {"email_lower": email.lower()},
+            {"_id": 0},
+        )
+
+    def update_last_login(self, user_id: str) -> None:
+        get_users_collection().update_one(
+            {"user_id": user_id},
+            {"$set": {"last_login_at": datetime.utcnow()}},
+        )
+
+
+user_repository = UserRepository()
+
+
+# ----------------------------------------------------------------------
+# Scans
+# ----------------------------------------------------------------------
 
 class ScanRepository:
     """
     Persistence operations for scan results.
-    Backed by MongoDB; stores each ScanResult as one document.
+    Backed by MongoDB; each ScanResult is one document.
     """
 
-    def create(self, result: ScanResult) -> ScanResult:
+    def create(self, result: ScanResult, owner_id: str) -> ScanResult:
         scan_id = result.scan_id or str(uuid4())
         result.scan_id = scan_id
 
@@ -30,14 +85,14 @@ class ScanRepository:
 
         document = {
             "scan_id": scan_id,
+            "owner_id": owner_id,
             "target_path": result.target_path,
             "status": result.status.value,
             "created_at": created_at,
             "result_json": result.model_dump(mode="json"),
         }
 
-        collection = get_collection()
-        collection.replace_one(
+        get_collection().replace_one(
             {"scan_id": scan_id},
             document,
             upsert=True,
@@ -45,12 +100,12 @@ class ScanRepository:
 
         return result
 
-    def get(self, scan_id: str) -> ScanResult | None:
-        row = get_collection().find_one(
-            {"scan_id": scan_id},
-            {"_id": 0},
-        )
+    def get(self, scan_id: str, owner_id: str | None = None) -> ScanResult | None:
+        query: dict = {"scan_id": scan_id}
+        if owner_id is not None:
+            query["owner_id"] = owner_id
 
+        row = get_collection().find_one(query, {"_id": 0})
         if row is None:
             return None
 
@@ -81,10 +136,10 @@ class ScanRepository:
 
         return result
 
-    def list(self) -> list[ScanResult]:
+    def list(self, owner_id: str) -> list[ScanResult]:
         cursor = (
             get_collection()
-            .find({}, {"_id": 0})
+            .find({"owner_id": owner_id}, {"_id": 0})
             .sort("created_at", -1)
         )
 
@@ -98,14 +153,22 @@ class ScanRepository:
             for row in cursor
         ]
 
-    def delete(self, scan_id: str) -> bool:
-        outcome = get_collection().delete_one({"scan_id": scan_id})
+    def delete(self, scan_id: str, owner_id: str | None = None) -> bool:
+        query: dict = {"scan_id": scan_id}
+        if owner_id is not None:
+            query["owner_id"] = owner_id
+        outcome = get_collection().delete_one(query)
         return outcome.deleted_count > 0
 
 
-def _repair_legacy_coverage(result: ScanResult) -> ScanResult:
-    """Recover coverage for scans saved before coverage was populated."""
+scan_repository = ScanRepository()
 
+
+# ----------------------------------------------------------------------
+# Helpers (unchanged)
+# ----------------------------------------------------------------------
+
+def _repair_legacy_coverage(result: ScanResult) -> ScanResult:
     coverage = result.coverage
     target = Path(result.target_path)
     if not target.exists():
@@ -125,14 +188,10 @@ def _repair_legacy_coverage(result: ScanResult) -> ScanResult:
     return result
 
 
-scan_repository = ScanRepository()
-
-
 def _attach_persisted_timestamp(
     result: ScanResult,
     created_at: datetime,
 ) -> ScanResult:
-    """Expose the database creation time for legacy JSON scan results."""
     if result.started_at is None:
         result.started_at = created_at
     if result.completed_at is None and result.status.value == "completed":

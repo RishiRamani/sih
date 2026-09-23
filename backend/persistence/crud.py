@@ -1,34 +1,43 @@
+# backend/persistence/crud.py
 from ..schemas.scan import ScanResult
-from .repositories import scan_repository
+from .repositories import scan_repository, user_repository
 
 
-def create_scan(result: ScanResult) -> ScanResult:
-    """
-    Persist a scan result.
-    """
-    return scan_repository.create(result)
+# ---- Scans ----
+
+def create_scan(result: ScanResult, owner_id: str) -> ScanResult:
+    return scan_repository.create(result, owner_id=owner_id)
 
 
-def get_scan(scan_id: str) -> ScanResult | None:
-    """
-    Retrieve a scan by ID.
-    """
-    return scan_repository.get(scan_id)
+def get_scan(scan_id: str, owner_id: str | None = None) -> ScanResult | None:
+    return scan_repository.get(scan_id, owner_id=owner_id)
 
 
-def list_scans() -> list[ScanResult]:
-    """
-    Retrieve all stored scans.
-    """
-    return scan_repository.list()
+def list_scans(owner_id: str) -> list[ScanResult]:
+    return scan_repository.list(owner_id=owner_id)
 
 
-def delete_scan(scan_id: str) -> bool:
-    """
-    Delete a scan by ID.
-    """
-    return scan_repository.delete(scan_id)
+def delete_scan(scan_id: str, owner_id: str | None = None) -> bool:
+    return scan_repository.delete(scan_id, owner_id=owner_id)
 
 
 def update_scan(result: ScanResult) -> ScanResult:
     return scan_repository.update(result)
+
+
+# ---- Users ----
+
+def create_user(email: str, password_hash: str) -> dict:
+    return user_repository.create(email=email, password_hash=password_hash)
+
+
+def get_user_by_id(user_id: str) -> dict | None:
+    return user_repository.get_by_id(user_id)
+
+
+def get_user_by_email(email: str) -> dict | None:
+    return user_repository.get_by_email(email)
+
+
+def update_user_last_login(user_id: str) -> None:
+    user_repository.update_last_login(user_id)

@@ -1,3 +1,4 @@
+# backend/main.py
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -7,6 +8,7 @@ from .api.risk import router as risk_router
 from .api.recommendations import router as recommendations_router
 from .api.cbom import router as cbom_router
 from .api.reports import router as reports_router
+from .auth.routes import router as auth_router
 
 app = FastAPI(
     title="ECDAT",
@@ -19,13 +21,14 @@ app.add_middleware(
     allow_origins=[
         "http://localhost:3000",
         "http://127.0.0.1:3000",
-        "https://qrypta-delta.vercel.app"
+        "https://qrypta-delta.vercel.app",
     ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
+app.include_router(auth_router)
 app.include_router(scans_router)
 app.include_router(findings_router)
 app.include_router(risk_router)
