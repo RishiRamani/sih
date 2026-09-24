@@ -85,7 +85,7 @@ export class RealApiAdapter implements ApiClient {
 
     await Promise.all(
       completed.map(async (s) => {
-        const findings = await this.getFindings(s.id, { pageSize: 10000 });
+        const findings = await this.getFindings(s.id, { pageSize: 20 });
         findingsByScan.set(s.id, findings.items);
       })
     );
