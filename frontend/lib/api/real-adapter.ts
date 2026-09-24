@@ -26,30 +26,50 @@ import {
   computeDashboardSummary,
 } from "./transform";
 
-const BASE_URL = process.env.API_BASE_URL ?? "https://qrypta.onrender.com";
+import { getToken, clearToken } from "@/lib/auth/storage";
+import { BASE_URL } from "./auth";
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  const token = getToken();
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    ...((init?.headers as Record<string, string>) ?? {}),
+  };
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+
   let res: Response;
   try {
-    res = await fetch(`${BASE_URL}${path}`, {
-      ...init,
-      headers: { "Content-Type": "application/json", ...(init?.headers ?? {}) },
-    });
+    res = await fetch(`${BASE_URL}${path}`, { ...init, headers });
   } catch {
     throw new ApiError(`Could not reach Qrypta backend at ${BASE_URL}${path}.`);
   }
+
+  // Session expired or invalid — clear and bounce to login
+  if (res.status === 401) {
+    clearToken();
+    if (typeof window !== "undefined" && window.location.pathname !== "/login") {
+      const next = encodeURIComponent(window.location.pathname);
+      window.location.href = `/login?next=${next}`;
+    }
+    throw new ApiError("Session expired. Please log in again.", 401);
+  }
+
   if (!res.ok) {
     let message = `Request to ${path} failed with status ${res.status}.`;
     try {
       const body = await res.json();
       if (body?.detail) {
-        message = typeof body.detail === "string"
-          ? body.detail
-          : JSON.stringify(body.detail);
+        message =
+          typeof body.detail === "string"
+            ? body.detail
+            : JSON.stringify(body.detail);
       }
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
     throw new ApiError(message, res.status);
   }
+
   if (res.status === 204) return undefined as T;
   return (await res.json()) as T;
 }

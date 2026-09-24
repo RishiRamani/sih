@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { AppShell } from "@/components/layout/AppShell";
+import { RequireAuth } from "@/lib/auth/guard";
 import { ScanTabs } from "@/components/layout/ScanTabs";
 import { ErrorState, LoadingState, EmptyState } from "@/components/ui/States";
 import { RiskBadge } from "@/components/ui/Badge";
@@ -75,18 +76,19 @@ export default function RecommendationsPage({ params }: { params: { scanId: stri
   }
 
   return (
-    <AppShell title="Recommendations">
-      <ScanTabs scanId={scanId} />
+    <RequireAuth>
+      <AppShell title="Recommendations">
+        <ScanTabs scanId={scanId} />
 
-      {loading ? <LoadingState label="Loading recommendations" /> : null}
-      {error ? <ErrorState description={error} onRetry={load} /> : null}
+        {loading ? <LoadingState label="Loading recommendations" /> : null}
+        {error ? <ErrorState description={error} onRetry={load} /> : null}
 
-      {!loading && !error && items.length === 0 ? (
-        <EmptyState title="No recommendations yet" description="Recommendations are generated once risk assessment completes." />
-      ) : null}
+        {!loading && !error && items.length === 0 ? (
+          <EmptyState title="No recommendations yet" description="Recommendations are generated once risk assessment completes." />
+        ) : null}
 
-      {items.length > 0 ? (
-        <div className="space-y-3">
+        {items.length > 0 ? (
+          <div className="space-y-3">
           {items.map((rec) => (
             <div className="rounded-md border border-border bg-surface p-4 shadow-subtle">
   <div className="flex flex-wrap items-start justify-between gap-3">
@@ -187,7 +189,8 @@ export default function RecommendationsPage({ params }: { params: { scanId: stri
 </div>
           ))}
         </div>
-      ) : null}
-    </AppShell>
+        ) : null}
+      </AppShell>
+    </RequireAuth>
   );
 }

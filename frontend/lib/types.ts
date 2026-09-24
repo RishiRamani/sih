@@ -350,3 +350,61 @@ export interface BackendScanCoverage {
   parse_errors: number;
   warnings: { code: string; message: string; path?: string | null }[];
 }
+
+// === Auth types ===
+
+export interface AuthUser {
+  userId: string;
+  email: string;
+  isVerified: boolean;
+  createdAt: string;
+}
+
+export interface RegisterPayload {
+  email: string;
+  password: string;
+}
+
+export interface LoginPayload {
+  email: string;
+  password: string;
+}
+
+export interface VerifyOtpPayload {
+  email: string;
+  otp: string;
+}
+
+export interface RegisterResponse {
+  status: "otp_sent";
+  email: string;
+  message: string;
+}
+
+export interface TokenResponse {
+  userId: string;
+  email: string;
+  token: string;
+  tokenType: string;
+}
+
+// Raw shapes returned by the backend — snake_case
+export interface BackendRegisterResponse {
+  status: string;
+  email: string;
+  message: string;
+}
+
+export interface BackendTokenResponse {
+  user_id: string;
+  email: string;
+  token: string;
+  token_type: string;
+}
+
+export interface BackendUserResponse {
+  user_id: string;
+  email: string;
+  created_at: string;
+  is_verified: boolean;
+}

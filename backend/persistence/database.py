@@ -27,10 +27,14 @@ def get_users_collection() -> Collection:
     """Users collection."""
     return get_client()[settings.MONGO_DB_NAME][settings.MONGO_USERS_COLLECTION]
 
+def get_comparisons_collection() -> Collection:
+    """Comparisons collection."""
+    return get_client()[settings.MONGO_DB_NAME]["comparisons"]
 
 def initialize_database() -> None:
     scans = get_collection()
     users = get_users_collection()
+    comparisons = get_comparisons_collection()
 
     # ---- scans ----
     scans.create_index("scan_id", unique=True)
@@ -42,5 +46,9 @@ def initialize_database() -> None:
     users.create_index("user_id", unique=True)
     users.create_index("email_lower", unique=True)
 
+    # ---- comparisons ----
+    comparisons.create_index("comparison_id", unique=True)
+    comparisons.create_index([("owner_id", 1), ("created_at", DESCENDING)])
+    comparisons.create_index([("owner_id", 1), ("old_scan_id", 1), ("new_scan_id", 1)], unique=True)
 
 initialize_database()

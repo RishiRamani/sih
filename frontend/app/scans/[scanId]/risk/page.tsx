@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Atom, ShieldAlert } from "lucide-react";
 import { AppShell } from "@/components/layout/AppShell";
+import { RequireAuth } from "@/lib/auth/guard";
 import { Card } from "@/components/ui/Card";
 import { ScanTabs } from "@/components/layout/ScanTabs";
 import { RiskDistributionChart } from "@/components/charts/RiskDistributionChart";
@@ -46,14 +47,15 @@ export default function RiskPage({ params }: { params: { scanId: string } }) {
   useEffect(load, [scanId]);
 
   return (
-    <AppShell title="Risk & quantum readiness">
-      <ScanTabs scanId={scanId} />
+    <RequireAuth>
+      <AppShell title="Risk & quantum readiness">
+        <ScanTabs scanId={scanId} />
 
-      {loading ? <LoadingState label="Loading risk assessment" /> : null}
-      {error ? <ErrorState description={error} onRetry={load} /> : null}
+        {loading ? <LoadingState label="Loading risk assessment" /> : null}
+        {error ? <ErrorState description={error} onRetry={load} /> : null}
 
-      {summary ? (
-        <div className="space-y-4">
+        {summary ? (
+          <div className="space-y-4">
           <Card bodyClassName="px-5 py-4">
             <p className="text-[13px] leading-relaxed text-text-secondary">
               <span className="font-semibold uppercase tracking-[0.08em] text-text-primary">
@@ -128,7 +130,8 @@ export default function RiskPage({ params }: { params: { scanId: string } }) {
             )}
           </Card>
         </div>
-      ) : null}
-    </AppShell>
+        ) : null}
+      </AppShell>
+    </RequireAuth>
   );
 }

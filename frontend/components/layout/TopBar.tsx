@@ -2,6 +2,7 @@
 
 import { Menu, Moon, Sun, FlaskConical } from "lucide-react";
 import { useTheme } from "@/components/theme/ThemeProvider";
+import { UserMenu } from "@/components/layout/UserMenu";
 
 export function TopBar({
   onMenuClick,
@@ -30,7 +31,7 @@ export function TopBar({
       </div>
 
       <div className="flex items-center gap-2">
-       
+       <UserMenu />
 
         <button
           type="button"

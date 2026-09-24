@@ -7,6 +7,7 @@ from ..core.config import settings
 from ..schemas.scan import ScanResult
 from ..scanners.source.file_enumerator import enumerate_source_files
 from .database import get_collection, get_users_collection
+from .database import get_comparisons_collection
 
 
 # ----------------------------------------------------------------------
@@ -229,3 +230,64 @@ def _attach_persisted_timestamp(
     if result.completed_at is None and result.status.value == "completed":
         result.completed_at = result.started_at
     return result
+
+
+class ComparisonRepository:
+    """Persistence for scan comparisons, scoped per user."""
+
+    def upsert(self, owner_id: str, payload: dict) -> dict:
+        from uuid import uuid4
+        from datetime import datetime
+
+        now = datetime.utcnow()
+        query = {
+            "owner_id": owner_id,
+            "old_scan_id": payload["old_scan_id"],
+            "new_scan_id": payload["new_scan_id"],
+        }
+        update = {
+            "$set": {
+                **payload,
+                "owner_id": owner_id,
+                "created_at": now,
+            },
+            "$setOnInsert": {
+                "comparison_id": f"cmp_{uuid4().hex[:12]}",
+            },
+        }
+        get_comparisons_collection().update_one(query, update, upsert=True)
+        return get_comparisons_collection().find_one(query, {"_id": 0}) or {}
+
+    def list_for_owner(self, owner_id: str) -> list[dict]:
+        cursor = (
+            get_comparisons_collection()
+            .find({"owner_id": owner_id}, {"_id": 0})
+            .sort("created_at", -1)
+        )
+        return list(cursor)
+
+    def list_for_scan(self, owner_id: str, scan_id: str) -> list[dict]:
+        cursor = (
+            get_comparisons_collection()
+            .find(
+                {
+                    "owner_id": owner_id,
+                    "$or": [
+                        {"old_scan_id": scan_id},
+                        {"new_scan_id": scan_id},
+                    ],
+                },
+                {"_id": 0},
+            )
+            .sort("created_at", -1)
+        )
+        return list(cursor)
+
+    def delete(self, owner_id: str, comparison_id: str) -> bool:
+        outcome = get_comparisons_collection().delete_one(
+            {"owner_id": owner_id, "comparison_id": comparison_id}
+        )
+        return outcome.deleted_count > 0
+
+
+comparison_repository = ComparisonRepository()

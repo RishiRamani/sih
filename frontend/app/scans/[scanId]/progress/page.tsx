@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { AlertTriangle, ArrowRight, CheckCircle2 } from "lucide-react";
 import { AppShell } from "@/components/layout/AppShell";
+import { RequireAuth } from "@/lib/auth/guard";
 import { Card } from "@/components/ui/Card";
 import { ScanTabs } from "@/components/layout/ScanTabs";
 import { ErrorState, LoadingState } from "@/components/ui/States";
@@ -23,13 +24,14 @@ export default function ScanProgressPage({ params }: { params: { scanId: string 
   }, [scanId]);
 
   return (
-    <AppShell title="Scan overview">
-      <ScanTabs scanId={scanId} />
-      {error ? <ErrorState description={error} /> : null}
-      {!scan && !error ? <LoadingState label="Loading scan" /> : null}
-      {scan ? (
-        <div className="space-y-4">
-          <Card title={scan.name} subtitle={scan.sourceLabel}>
+    <RequireAuth>
+      <AppShell title="Scan overview">
+        <ScanTabs scanId={scanId} />
+        {error ? <ErrorState description={error} /> : null}
+        {!scan && !error ? <LoadingState label="Loading scan" /> : null}
+        {scan ? (
+          <div className="space-y-4">
+            <Card title={scan.name} subtitle={scan.sourceLabel}>
             <div className="flex flex-wrap items-center gap-3">
               <ScanStatusBadge status={scan.status} />
               <span className="text-sm text-text-secondary">{scan.findingCount ?? 0} findings</span>
@@ -71,9 +73,10 @@ export default function ScanProgressPage({ params }: { params: { scanId: string 
             <Link href={`/scans/${scanId}/findings`} className="inline-flex items-center gap-2 text-sm font-medium text-accent hover:underline">
               <CheckCircle2 size={15} /> View findings <ArrowRight size={14} />
             </Link>
-          ) : null}
-        </div>
-      ) : null}
-    </AppShell>
+            ) : null}
+          </div>
+        ) : null}
+      </AppShell>
+    </RequireAuth>
   );
 }

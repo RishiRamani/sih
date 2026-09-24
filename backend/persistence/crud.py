@@ -1,7 +1,7 @@
 # backend/persistence/crud.py
 from ..schemas.scan import ScanResult
 from .repositories import scan_repository, user_repository
-
+from .repositories import comparison_repository
 
 # ---- Scans ----
 
@@ -53,3 +53,19 @@ def mark_user_verified(user_id: str) -> None:
 
 def update_user_last_login(user_id: str) -> None:
     user_repository.update_last_login(user_id)
+
+
+def upsert_comparison(owner_id: str, payload: dict) -> dict:
+    return comparison_repository.upsert(owner_id, payload)
+
+
+def list_comparisons(owner_id: str) -> list[dict]:
+    return comparison_repository.list_for_owner(owner_id)
+
+
+def list_comparisons_for_scan(owner_id: str, scan_id: str) -> list[dict]:
+    return comparison_repository.list_for_scan(owner_id, scan_id)
+
+
+def delete_comparison(owner_id: str, comparison_id: str) -> bool:
+    return comparison_repository.delete(owner_id, comparison_id)

@@ -14,6 +14,7 @@ import {
   TrendingDown,
 } from "lucide-react";
 import { AppShell } from "@/components/layout/AppShell";
+import { RequireAuth } from "@/lib/auth/guard";
 import { Card } from "@/components/ui/Card";
 import { RiskBadge } from "@/components/ui/Badge";
 import { LoadingState, ErrorState } from "@/components/ui/States";
@@ -100,7 +101,7 @@ export default function ComparePage({
         const diff = compareScans(oldF.items, newF.items);
         const verdict = comparisonVerdict(oldGradeRes.grade, newGradeRes.grade);
 
-        recordComparison({
+        void recordComparison({
           oldScanId: oldS.id,
           oldScanName: oldS.name,
           oldGrade: oldGradeRes.grade,
@@ -120,20 +121,24 @@ export default function ComparePage({
 
   if (loading) {
     return (
-      <AppShell title="Compare scans">
-        <LoadingState label="Loading comparison" />
-      </AppShell>
+      <RequireAuth>
+        <AppShell title="Compare scans">
+          <LoadingState label="Loading comparison" />
+        </AppShell>
+      </RequireAuth>
     );
   }
 
   if (error || !oldScan || !newScan) {
     return (
-      <AppShell title="Compare scans">
-        <ErrorState
-          description={error ?? "Could not load both scans."}
-          onRetry={() => window.location.reload()}
-        />
-      </AppShell>
+      <RequireAuth>
+        <AppShell title="Compare scans">
+          <ErrorState
+            description={error ?? "Could not load both scans."}
+            onRetry={() => window.location.reload()}
+          />
+        </AppShell>
+      </RequireAuth>
     );
   }
 
@@ -157,14 +162,15 @@ export default function ComparePage({
   const sharedSource = newScan.sourceLabel;
 
   return (
-    <AppShell title="Compare scans">
-      <Link
-        href={`/scans/${newScan.id}/findings`}
-        className="mb-5 inline-flex items-center gap-1.5 text-[12px] font-medium uppercase tracking-[0.08em] text-text-secondary transition-colors hover:text-text-primary"
-      >
-        <ArrowLeft size={13} />
-        Back to latest scan
-      </Link>
+    <RequireAuth>
+      <AppShell title="Compare scans">
+        <Link
+          href={`/scans/${newScan.id}/findings`}
+          className="mb-5 inline-flex items-center gap-1.5 text-[12px] font-medium uppercase tracking-[0.08em] text-text-secondary transition-colors hover:text-text-primary"
+        >
+          <ArrowLeft size={13} />
+          Back to latest scan
+        </Link>
 
       <div className="mb-6">
         <p className="eyebrow">Comparison</p>
@@ -268,7 +274,8 @@ export default function ComparePage({
           </Card>
         ) : null}
       </div>
-    </AppShell>
+      </AppShell>
+    </RequireAuth>
   );
 }
 

@@ -9,11 +9,11 @@ import {
   PlusCircle,
   Moon,
   Sun,
-  FlaskConical,
-  Activity,
   GitCompareArrows,
 } from "lucide-react";
 import { useTheme } from "@/components/theme/ThemeProvider";
+import { UserMenu } from "@/components/layout/UserMenu";
+import { useAuth } from "@/lib/auth/context";
 import { cn } from "@/lib/utils";
 import { listComparisons } from "@/lib/comparisons";
 
@@ -22,28 +22,34 @@ interface NavItem {
   label: string;
   icon: typeof LayoutDashboard;
   badge?: number;
-  /** Rendered as a raised button instead of a link */
   cta?: boolean;
 }
 
 export function AppNav() {
   const pathname = usePathname();
   const { theme, toggleTheme } = useTheme();
+  const { user } = useAuth();
   const [comparisonCount, setComparisonCount] = useState(0);
 
-  // Read the count on mount and subscribe to changes
+  // Re-fetch the count whenever the user changes or the path changes
+  // (path change catches "user just rescaned and navigated back to /scans").
   useEffect(() => {
-    function refresh() {
-      setComparisonCount(listComparisons().length);
+    if (!user) {
+      setComparisonCount(0);
+      return;
     }
-    refresh();
-    window.addEventListener("storage", refresh);
-    window.addEventListener("ecdat-comparisons-changed", refresh);
+    let cancelled = false;
+    listComparisons()
+      .then((records) => {
+        if (!cancelled) setComparisonCount(records.length);
+      })
+      .catch(() => {
+        if (!cancelled) setComparisonCount(0);
+      });
     return () => {
-      window.removeEventListener("storage", refresh);
-      window.removeEventListener("ecdat-comparisons-changed", refresh);
+      cancelled = true;
     };
-  }, []);
+  }, [user, pathname]);
 
   const navItems: NavItem[] = [
     { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -51,7 +57,6 @@ export function AppNav() {
     { href: "/scans/new", label: "New scan", icon: PlusCircle, cta: true },
   ];
 
-  // Insert Comparisons between Scans and New scan when there's history
   if (comparisonCount > 0) {
     navItems.splice(2, 0, {
       href: "/comparisons",
@@ -77,7 +82,6 @@ export function AppNav() {
   return (
     <header className="sticky top-0 z-30 border-b border-rule bg-surface">
       <div className="mx-auto flex h-16 max-w-[1400px] items-center px-6 md:px-8">
-        {/* Brand */}
         <Link href="/dashboard" className="flex shrink-0 items-center gap-3">
           <span className="flex h-7 w-7 items-center justify-center rounded border border-accent/40 bg-accent-soft">
             <span className="h-2 w-2 rounded-full bg-accent pulse-accent" />
@@ -100,7 +104,6 @@ export function AppNav() {
 
             return (
               <div key={item.href} className="flex items-center">
-                {/* Divider before the CTA */}
                 {isLast && isPrimaryCta ? (
                   <span className="mx-2 h-5 w-px bg-border" aria-hidden />
                 ) : null}
@@ -132,9 +135,8 @@ export function AppNav() {
           })}
         </nav>
 
-        {/* Right cluster */}
         <div className="ml-auto flex items-center gap-3">
-          
+          <UserMenu />
 
           <span className="hidden h-5 w-px bg-border sm:block" />
 
@@ -150,7 +152,6 @@ export function AppNav() {
         </div>
       </div>
 
-      {/* Mobile nav row */}
       <nav className="flex items-center gap-1 overflow-x-auto border-t border-border px-4 py-2 md:hidden">
         {navItems.map((item) => {
           const active = isItemActive(item.href);

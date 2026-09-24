@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Search } from "lucide-react";
 import { Download } from "lucide-react";
 import { AppShell } from "@/components/layout/AppShell";
+import { RequireAuth } from "@/lib/auth/guard";
 import { ScanTabs } from "@/components/layout/ScanTabs";
 import { Card } from "@/components/ui/Card";
 import { DataTable, type Column } from "@/components/ui/DataTable";
@@ -13,6 +14,7 @@ import { ErrorState, LoadingState } from "@/components/ui/States";
 import { api } from "@/lib/api";
 import type { Finding, Scan } from "@/lib/types";
 import { INPUT_TYPE_LABEL } from "@/lib/utils";
+import { BASE_URL } from "@/lib/api/auth";
 
 const PAGE_SIZE = 15;
 
@@ -114,20 +116,21 @@ export default function FindingsPage({ params }: { params: { scanId: string } })
   ];
 
   return (
-    <AppShell title="Scan results">
-      <ScanTabs scanId={scanId} />
+    <RequireAuth>
+      <AppShell title="Scan results">
+        <ScanTabs scanId={scanId} />
 
-      <div className="mb-4 flex justify-end">
-        <a
-          href={`${process.env.API_BASE_URL ?? "https://qrypta.onrender.com"}/scans/${scanId}/report?format=html`}
-          download={`ecdat-${scanId}.html`}
-          className="inline-flex items-center gap-2 rounded border border-border bg-surface px-3 py-2 text-xs font-medium text-text-primary hover:border-accent hover:text-accent"
-        >
-          <Download size={14} /> Download report
-        </a>
-      </div>
+        <div className="mb-4 flex justify-end">
+          <a
+            href={`${BASE_URL}/scans/${scanId}/report?format=html`}
+            download={`ecdat-${scanId}.html`}
+            className="inline-flex items-center gap-2 rounded border border-border bg-surface px-3 py-2 text-xs font-medium text-text-primary hover:border-accent hover:text-accent"
+          >
+            <Download size={14} /> Download report
+          </a>
+        </div>
 
-      <div className="mb-4 flex flex-wrap items-center gap-2">
+        <div className="mb-4 flex flex-wrap items-center gap-2">
         <div className="relative">
           <Search size={14} className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-text-secondary" />
           <input
@@ -208,7 +211,8 @@ export default function FindingsPage({ params }: { params: { scanId: string } })
             />
           </Card>
         </>
-      ) : null}
-    </AppShell>
+        ) : null}
+      </AppShell>
+    </RequireAuth>
   );
 }

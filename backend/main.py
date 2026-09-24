@@ -9,6 +9,7 @@ from .api.recommendations import router as recommendations_router
 from .api.cbom import router as cbom_router
 from .api.reports import router as reports_router
 from .auth.routes import router as auth_router
+from .api.comparisons import router as comparisons_router
 
 app = FastAPI(
     title="ECDAT",
@@ -35,3 +36,4 @@ app.include_router(risk_router)
 app.include_router(recommendations_router)
 app.include_router(cbom_router)
 app.include_router(reports_router)
+app.include_router(comparisons_router)
