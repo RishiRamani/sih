@@ -66,7 +66,7 @@ try {
               <ShieldCheck size={18} className="text-accent" />
             </span>
             <h1 className="mt-4 font-mono text-[22px] font-semibold tracking-[0.18em] text-text-primary">
-              QR Y P T A
+              Q R Y P T A
             </h1>
             <p className="mt-1 font-mono text-[10px] uppercase tracking-[0.2em] text-text-secondary">
               Cryptographic inventory
