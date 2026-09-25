@@ -12,6 +12,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { AppShell } from "@/components/layout/AppShell";
+import { RequireAuth } from "@/lib/auth/guard";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { useToast } from "@/components/ui/Toast";
@@ -84,21 +85,22 @@ export default function NewScanPage() {
   }
 
   return (
-    <AppShell title="New scan">
-      <div className="mx-auto max-w-2xl">
-        <div className="mb-6">
-          <p className="eyebrow">Discovery</p>
-          <h2 className="mt-1 text-2xl font-semibold tracking-[-0.02em] text-text-primary">
-            Start a new scan
-          </h2>
-          <p className="mt-1 text-[13px] leading-relaxed text-text-secondary">
-            Qrypta discovers cryptographic usage across the asset you provide, then normalizes
-            findings into a CBOM and risk assessment. Analysis, detection, and risk scoring all
-            happen on the backend.
-          </p>
-        </div>
+    <RequireAuth>
+      <AppShell title="New scan">
+        <div className="mx-auto max-w-2xl">
+          <div className="mb-6">
+            <p className="eyebrow">Discovery</p>
+            <h2 className="mt-1 text-2xl font-semibold tracking-[-0.02em] text-text-primary">
+              Start a new scan
+            </h2>
+            <p className="mt-1 text-[13px] leading-relaxed text-text-secondary">
+              Qrypta discovers cryptographic usage across the asset you provide, then normalizes
+              findings into a CBOM and risk assessment. Analysis, detection, and risk scoring all
+              happen on the backend.
+            </p>
+          </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-4">
           <Card title="Asset type">
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
               {INPUT_TYPES.map((t) => (
@@ -253,5 +255,6 @@ export default function NewScanPage() {
         </form>
       </div>
     </AppShell>
+  </RequireAuth>
   );
 }

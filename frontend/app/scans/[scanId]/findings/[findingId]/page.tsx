@@ -9,6 +9,7 @@ import {
   Sparkles
 } from "lucide-react";
 import { AppShell } from "@/components/layout/AppShell";
+import { RequireAuth } from "@/lib/auth/guard";
 import { Card } from "@/components/ui/Card";
 import {
   RiskBadge,
@@ -67,14 +68,15 @@ export default function FindingDetailPage({
   useEffect(load, [scanId, findingId]);
 
   return (
-    <AppShell title="Finding detail">
-      <Link
-        href={`/scans/${scanId}/findings`}
-        className="mb-5 inline-flex items-center gap-1.5 text-[12px] font-medium uppercase tracking-[0.08em] text-text-secondary transition-colors hover:text-text-primary"
-      >
-        <ArrowLeft size={13} />
-        Back to findings
-      </Link>
+    <RequireAuth>
+      <AppShell title="Finding detail">
+        <Link
+          href={`/scans/${scanId}/findings`}
+          className="mb-5 inline-flex items-center gap-1.5 text-[12px] font-medium uppercase tracking-[0.08em] text-text-secondary transition-colors hover:text-text-primary"
+        >
+          <ArrowLeft size={13} />
+          Back to findings
+        </Link>
 
       {loading ? <LoadingState label="Loading finding" /> : null}
       {error ? <ErrorState description={error} onRetry={load} /> : null}
@@ -307,7 +309,8 @@ export default function FindingDetailPage({
             )}
           </div>
         </div>
-      ) : null}
-    </AppShell>
+        ) : null}
+      </AppShell>
+    </RequireAuth>
   );
 }

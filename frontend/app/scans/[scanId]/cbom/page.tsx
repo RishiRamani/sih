@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Download } from "lucide-react";
 import { AppShell } from "@/components/layout/AppShell";
+import { RequireAuth } from "@/lib/auth/guard";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { ScanTabs } from "@/components/layout/ScanTabs";
@@ -15,6 +16,7 @@ import type { CbomResponse } from "@/lib/api/client";
 import type { Finding } from "@/lib/types";
 import { INPUT_TYPE_LABEL, formatDate } from "@/lib/utils";
 import { CryptoUsageGraph } from "@/components/charts/CryptoUsageGraph";
+import { BASE_URL } from "@/lib/api/auth";
 
 const PAGE_SIZE = 20;
 
@@ -121,14 +123,15 @@ export default function CbomPage({ params }: { params: { scanId: string } }) {
   ];
 
   return (
-    <AppShell title="Cryptographic inventory">
-      <ScanTabs scanId={scanId} />
+    <RequireAuth>
+      <AppShell title="Cryptographic inventory">
+        <ScanTabs scanId={scanId} />
 
-      {loading ? <LoadingState label="Loading CBOM" /> : null}
-      {error ? <ErrorState description={error} onRetry={load} /> : null}
+        {loading ? <LoadingState label="Loading CBOM" /> : null}
+        {error ? <ErrorState description={error} onRetry={load} /> : null}
 
-      {data ? (
-        <>
+        {data ? (
+          <>
           <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
             <div>
               <p className="eyebrow">Inventory</p>
@@ -142,7 +145,7 @@ export default function CbomPage({ params }: { params: { scanId: string } }) {
             </div>
             <Button
               variant="secondary"
-              onClick={() => window.open(`${process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000"}/scans/${scanId}/report?format=html`, "_blank", "noopener,noreferrer")}
+              onClick={() => window.open(`${BASE_URL}/scans/${scanId}/report?format=html`, "_blank", "noopener,noreferrer")}
             >
               <Download size={14} />
               Export report
@@ -172,8 +175,8 @@ export default function CbomPage({ params }: { params: { scanId: string } }) {
   </Card>
 ) : null}
         </>
-      ) : null}
-      
-    </AppShell>
+        ) : null}
+      </AppShell>
+    </RequireAuth>
   );
 }

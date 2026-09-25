@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { ThemeProvider } from "@/components/theme/ThemeProvider";
 import { ToastProvider } from "@/components/ui/Toast";
+import { AuthProvider } from "@/lib/auth/context";
 import "./globals.css";
 import { JetBrains_Mono, Inter } from "next/font/google";
 
@@ -38,7 +39,9 @@ export default function RootLayout({
       </head>
       <body className={`${app.variable} ${mono.variable}`}>
         <ThemeProvider>
-          <ToastProvider>{children}</ToastProvider>
+          <ToastProvider>
+            <AuthProvider>{children}</AuthProvider>
+          </ToastProvider>
         </ThemeProvider>
       </body>
     </html>

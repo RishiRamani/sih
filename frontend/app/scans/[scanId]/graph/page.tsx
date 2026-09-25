@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { AppShell } from "@/components/layout/AppShell";
+import { RequireAuth } from "@/lib/auth/guard";
 import { Card } from "@/components/ui/Card";
 import { ScanTabs } from "@/components/layout/ScanTabs";
 import { CryptoUsageGraph } from "@/components/charts/CryptoUsageGraph";
@@ -29,21 +30,22 @@ export default function GraphPage({ params }: { params: { scanId: string } }) {
   useEffect(load, [scanId]);
 
   return (
-    <AppShell title="Crypto usage graph">
-      <ScanTabs scanId={scanId} />
+    <RequireAuth>
+      <AppShell title="Crypto usage graph">
+        <ScanTabs scanId={scanId} />
 
-      <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <p className="eyebrow">Structure</p>
-          <h2 className="mt-1 text-xl font-semibold tracking-[-0.02em] text-text-primary">
-            Crypto usage graph
-          </h2>
-          <p className="mt-1 text-[13px] text-text-secondary">
-            Where cryptography is used and what it's used for. Collapse branches to focus; click a leaf to open the finding.
-          </p>
-        </div>
+        <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <p className="eyebrow">Structure</p>
+            <h2 className="mt-1 text-xl font-semibold tracking-[-0.02em] text-text-primary">
+              Crypto usage graph
+            </h2>
+            <p className="mt-1 text-[13px] text-text-secondary">
+              Where cryptography is used and what it's used for. Collapse branches to focus; click a leaf to open the finding.
+            </p>
+          </div>
 
-        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2">
           <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-text-secondary">
             Group by
           </span>
@@ -91,7 +93,8 @@ export default function GraphPage({ params }: { params: { scanId: string } }) {
             groupBy={groupBy}
           />
         </Card>
-      ) : null}
-    </AppShell>
+        ) : null}
+      </AppShell>
+    </RequireAuth>
   );
 }

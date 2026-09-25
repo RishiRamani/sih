@@ -1,82 +1,151 @@
-/**
- * Comparison records live in localStorage for the SIH prototype.
- * When the backend adds a `/comparisons` endpoint, replace the storage
- * layer here — every consumer already imports from this module.
- */
+// frontend/lib/comparisons.ts
+import { ApiError } from "@/lib/api/client";
+import type { Grade } from "@/lib/grade";
+import { BASE_URL } from "./api/auth";
+
+
 
 export interface ComparisonRecord {
-  /** unique id for this comparison */
   id: string;
-  /** the older scan (before) */
   oldScanId: string;
   oldScanName: string;
   oldGrade: string;
-  /** the newer scan (after) */
   newScanId: string;
   newScanName: string;
   newGrade: string;
-  /** verdict */
   verdict: "improved" | "regressed" | "unchanged";
-  /** counts at time of comparison */
   removedCount: number;
   addedCount: number;
-  /** ISO timestamp of when this comparison was recorded */
   createdAt: string;
 }
 
-const STORAGE_KEY = "ecdat-comparisons";
-const CHANGE_EVENT = "ecdat-comparisons-changed";
+// Backend returns snake_case — normalize at the boundary.
+interface BackendComparison {
+  comparison_id: string;
+  owner_id: string;
+  old_scan_id: string;
+  old_scan_name: string;
+  old_grade: string;
+  new_scan_id: string;
+  new_scan_name: string;
+  new_grade: string;
+  verdict: "improved" | "regressed" | "unchanged";
+  removed_count: number;
+  added_count: number;
+  created_at: string;
+}
 
-function readAll(): ComparisonRecord[] {
-  if (typeof window === "undefined") return [];
-  try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return [];
-    return parsed as ComparisonRecord[];
-  } catch {
-    return [];
+function toRecord(raw: BackendComparison): ComparisonRecord {
+  return {
+    id: raw.comparison_id,
+    oldScanId: raw.old_scan_id,
+    oldScanName: raw.old_scan_name,
+    oldGrade: raw.old_grade,
+    newScanId: raw.new_scan_id,
+    newScanName: raw.new_scan_name,
+    newGrade: raw.new_grade,
+    verdict: raw.verdict,
+    removedCount: raw.removed_count,
+    addedCount: raw.added_count,
+    createdAt: raw.created_at,
+  };
+}
+
+function authHeaders(): Record<string, string> {
+  const token =
+    typeof window !== "undefined"
+      ? window.localStorage.getItem("ecdat-token")
+      : null;
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+  };
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+  return headers;
+}
+
+async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  const res = await fetch(`${BASE_URL}${path}`, {
+    ...init,
+    headers: { ...authHeaders(), ...(init?.headers ?? {}) },
+  });
+  if (!res.ok) {
+    let message = `Request failed: ${res.status}`;
+    try {
+      const body = await res.json();
+      if (body?.detail) message = String(body.detail);
+    } catch {
+      /* ignore */
+    }
+    throw new ApiError(message, res.status);
   }
+  if (res.status === 204) return undefined as T;
+  return (await res.json()) as T;
 }
 
-function writeAll(records: ComparisonRecord[]): void {
-  if (typeof window === "undefined") return;
-  try {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
-    // Same-tab listeners don't get the native "storage" event, so fire our own
-    window.dispatchEvent(new Event(CHANGE_EVENT));
-  } catch {
-    /* quota exceeded — ignore */
-  }
+export async function listComparisons(): Promise<ComparisonRecord[]> {
+  const raw = await request<BackendComparison[]>("/comparisons");
+  return raw.map(toRecord);
 }
 
-export function listComparisons(): ComparisonRecord[] {
-  return readAll().sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-}
-
-/** All comparisons involving this scan (as either old or new). */
-export function listComparisonsForScan(scanId: string): ComparisonRecord[] {
-  return listComparisons().filter(
-    (r) => r.oldScanId === scanId || r.newScanId === scanId
+export async function listComparisonsForScan(
+  scanId: string
+): Promise<ComparisonRecord[]> {
+  const raw = await request<BackendComparison[]>(
+    `/comparisons/for-scan/${encodeURIComponent(scanId)}`
   );
+  return raw.map(toRecord);
 }
 
-/**
- * Given a scan id, return the "other" scan id in the most recent comparison.
- * Useful for showing a "Compare" shortcut next to a scan.
- */
-export function findLatestComparisonForScan(scanId: string): {
+export async function recordComparison(record: {
+  oldScanId: string;
+  oldScanName: string;
+  oldGrade: Grade | string;
+  newScanId: string;
+  newScanName: string;
+  newGrade: Grade | string;
+  verdict: "improved" | "regressed" | "unchanged";
+  removedCount: number;
+  addedCount: number;
+}): Promise<ComparisonRecord> {
+  const raw = await request<BackendComparison>("/comparisons", {
+    method: "POST",
+    body: JSON.stringify({
+      old_scan_id: record.oldScanId,
+      old_scan_name: record.oldScanName,
+      old_grade: String(record.oldGrade),
+      new_scan_id: record.newScanId,
+      new_scan_name: record.newScanName,
+      new_grade: String(record.newGrade),
+      verdict: record.verdict,
+      removed_count: record.removedCount,
+      added_count: record.addedCount,
+    }),
+  });
+  return toRecord(raw);
+}
+
+export async function deleteComparison(id: string): Promise<void> {
+  await request(`/comparisons/${encodeURIComponent(id)}`, {
+    method: "DELETE",
+  });
+}
+
+export async function clearAllComparisons(): Promise<void> {
+  const records = await listComparisons();
+  await Promise.all(records.map((r) => deleteComparison(r.id)));
+}
+
+export function findLatestComparisonForScan(
+  scanId: string,
+  records: ComparisonRecord[]
+): {
   otherScanId: string;
   otherScanName: string;
   role: "old" | "new";
   record: ComparisonRecord;
 } | null {
-  const matches = listComparisonsForScan(scanId);
-  // Use destructuring — TS narrows `latest` to `ComparisonRecord | undefined`
-  const [latest] = matches;
+  const [latest] = records;
   if (!latest) return null;
-
   if (latest.oldScanId === scanId) {
     return {
       otherScanId: latest.newScanId,
@@ -90,46 +159,5 @@ export function findLatestComparisonForScan(scanId: string): {
     otherScanName: latest.oldScanName,
     role: "new",
     record: latest,
-  };
-}
-
-export function recordComparison(
-  record: Omit<ComparisonRecord, "id" | "createdAt">
-): ComparisonRecord {
-  const full: ComparisonRecord = {
-    ...record,
-    id: `cmp_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
-    createdAt: new Date().toISOString(),
-  };
-
-  // De-dupe: if we already have a comparison with the same old/new pair, replace it
-  const existing = readAll().filter(
-    (r) => !(r.oldScanId === full.oldScanId && r.newScanId === full.newScanId)
-  );
-  writeAll([full, ...existing]);
-  return full;
-}
-
-export function deleteComparison(id: string): void {
-  writeAll(readAll().filter((r) => r.id !== id));
-}
-
-export function clearAllComparisons(): void {
-  writeAll([]);
-}
-
-/**
- * Subscribe to changes. Returns an unsubscribe function.
- * Use inside a useEffect:
- *
- *   useEffect(() => subscribeComparisons(refresh), []);
- */
-export function subscribeComparisons(listener: () => void): () => void {
-  if (typeof window === "undefined") return () => {};
-  window.addEventListener(CHANGE_EVENT, listener);
-  window.addEventListener("storage", listener);
-  return () => {
-    window.removeEventListener(CHANGE_EVENT, listener);
-    window.removeEventListener("storage", listener);
   };
 }

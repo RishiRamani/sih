@@ -2,7 +2,7 @@
 
 import { Menu, Moon, Sun, FlaskConical } from "lucide-react";
 import { useTheme } from "@/components/theme/ThemeProvider";
-import { isMockApi } from "@/lib/api";
+import { UserMenu } from "@/components/layout/UserMenu";
 
 export function TopBar({
   onMenuClick,
@@ -31,12 +31,7 @@ export function TopBar({
       </div>
 
       <div className="flex items-center gap-2">
-        {isMockApi ? (
-          <span className="hidden items-center gap-1.5 rounded-sm border border-amber/35 bg-amber/10 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.08em] text-amber sm:inline-flex">
-            <FlaskConical size={11} />
-            Mock data
-          </span>
-        ) : null}
+       <UserMenu />
 
         <button
           type="button"

@@ -1,40 +1,54 @@
-import sqlite3
-from pathlib import Path
+# backend/persistence/database.py
+from pymongo import MongoClient, DESCENDING
+from pymongo.collection import Collection
+
+from ..core.config import settings
 
 
-DB_PATH = Path("backend/data/ecdat.db")
+_client: MongoClient | None = None
 
 
-def get_connection() -> sqlite3.Connection:
-    """
-    Create a SQLite connection for the ECDAT database.
-    """
-    DB_PATH.parent.mkdir(parents=True, exist_ok=True)
+def get_client() -> MongoClient:
+    global _client
+    if _client is None:
+        _client = MongoClient(
+            settings.MONGO_URI,
+            serverSelectionTimeoutMS=5000,
+        )
+    return _client
 
-    connection = sqlite3.connect(DB_PATH)
-    connection.row_factory = sqlite3.Row
 
-    return connection
+def get_collection() -> Collection:
+    """Scans collection."""
+    return get_client()[settings.MONGO_DB_NAME][settings.MONGO_COLLECTION]
 
+
+def get_users_collection() -> Collection:
+    """Users collection."""
+    return get_client()[settings.MONGO_DB_NAME][settings.MONGO_USERS_COLLECTION]
+
+def get_comparisons_collection() -> Collection:
+    """Comparisons collection."""
+    return get_client()[settings.MONGO_DB_NAME]["comparisons"]
 
 def initialize_database() -> None:
-    """
-    Create the persistence schema if it does not already exist.
-    """
-    with get_connection() as connection:
-        connection.execute(
-            """
-            CREATE TABLE IF NOT EXISTS scans (
-                scan_id TEXT PRIMARY KEY,
-                target_path TEXT NOT NULL,
-                status TEXT NOT NULL,
-                result_json TEXT NOT NULL,
-                created_at TEXT NOT NULL
-            )
-            """
-        )
+    scans = get_collection()
+    users = get_users_collection()
+    comparisons = get_comparisons_collection()
 
-        connection.commit()
+    # ---- scans ----
+    scans.create_index("scan_id", unique=True)
+    scans.create_index([("created_at", DESCENDING)])
+    scans.create_index([("status", 1), ("created_at", DESCENDING)])
+    scans.create_index([("owner_id", 1), ("created_at", DESCENDING)])
 
+    # ---- users ----
+    users.create_index("user_id", unique=True)
+    users.create_index("email_lower", unique=True)
 
-initialize_database()
+    # ---- comparisons ----
+    comparisons.create_index("comparison_id", unique=True)
+    comparisons.create_index([("owner_id", 1), ("created_at", DESCENDING)])
+    comparisons.create_index([("owner_id", 1), ("old_scan_id", 1), ("new_scan_id", 1)], unique=True)
+
+# initialize_database()
