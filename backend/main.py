@@ -8,8 +8,10 @@ from .api.risk import router as risk_router
 from .api.recommendations import router as recommendations_router
 from .api.cbom import router as cbom_router
 from .api.reports import router as reports_router
-from .auth.routes import router as auth_router
 from .api.comparisons import router as comparisons_router
+from .auth.routes import router as auth_router
+from .persistence.database import initialize_database
+
 
 app = FastAPI(
     title="ECDAT",
@@ -28,6 +30,12 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.on_event("startup")
+def _on_startup() -> None:
+    initialize_database()
+
 
 app.include_router(auth_router)
 app.include_router(scans_router)

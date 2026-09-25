@@ -51,4 +51,4 @@ def initialize_database() -> None:
     comparisons.create_index([("owner_id", 1), ("created_at", DESCENDING)])
     comparisons.create_index([("owner_id", 1), ("old_scan_id", 1), ("new_scan_id", 1)], unique=True)
 
-initialize_database()
+# initialize_database()
