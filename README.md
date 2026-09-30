@@ -1,23 +1,23 @@
-# ECDAT Backend
+# Qrypta Backend
 
-ECDAT (Enterprise Cryptographic Discovery & Analysis Tool) is a Python backend for discovering cryptographic usage in software assets, normalizing the results, assessing cryptographic and quantum risk, generating migration recommendations, and producing a CycloneDX 1.7 Cryptography Bill of Materials (CBOM).
+Qrypta is a Python backend for discovering cryptographic usage in software assets, normalizing the results, assessing cryptographic and quantum risk, generating migration recommendations, and producing a CycloneDX 1.7 Cryptography Bill of Materials (CBOM).
 
 ## Current Capabilities
 
 The backend currently supports:
 
-- Scanning local source directories.
-- Scanning Git repositories by URL.
-- Inspecting supported executable and shared-library binaries without executing them.
-- Inspecting `.tar` container image archives for cryptographic library indicators.
-- Detecting cryptography-related dependencies in supported manifest files.
-- Parsing X.509 certificates in PEM, CRT, CER, and DER formats.
-- Normalizing scanner output into a shared `Finding` model.
-- Deduplicating findings and retaining detection evidence and confidence.
-- Assessing classical risk, quantum risk, Mosca-style timing risk, and combined severity.
-- Generating migration and hybrid-cryptography recommendations.
-- Generating and validating CycloneDX 1.7 CBOM data.
-- Persisting completed scan results in a local SQLite database.
+* Scanning local source directories.
+* Scanning Git repositories by URL.
+* Inspecting supported executable and shared-library binaries without executing them.
+* Inspecting `.tar` container image archives for cryptographic library indicators.
+* Detecting cryptography-related dependencies in supported manifest files.
+* Parsing X.509 certificates in PEM, CRT, CER, and DER formats.
+* Normalizing scanner output into a shared `Finding` model.
+* Deduplicating findings and retaining detection evidence and confidence.
+* Assessing classical risk, quantum risk, Mosca-style timing risk, and combined severity.
+* Generating migration and hybrid-cryptography recommendations.
+* Generating and validating CycloneDX 1.7 CBOM data.
+* Persisting completed scan results in a MongoDB database.
 
 The implementation is a synchronous prototype. Uploaded or acquired binaries are inspected statically and are not executed by the scanners.
 
@@ -47,7 +47,7 @@ Normalization and deduplication
 				+--> CycloneDX 1.7 CBOM
 				|
 				v
-SQLite persistence and API responses
+MongoDB persistence and API responses
 ```
 
 The main orchestration entry point is `backend/orchestration/pipeline.py`. Scanners implement the interface in `backend/scanners/base.py` and return `Finding` objects defined in `backend/schemas/finding.py`.
@@ -66,7 +66,7 @@ The main orchestration entry point is `backend/orchestration/pipeline.py`. Scann
 		intelligence/           Classical, quantum, Mosca, risk, and recommendation logic
 		normalization/          Finding normalization and deduplication
 		orchestration/          Scan pipeline
-		persistence/            SQLite database and scan repository
+		persistence/            MongoDB database and scan repository
 		reporting/              Reporting package area
 		scanners/               Source, binary, container, dependency, and certificate scanners
 		schemas/                Pydantic request, finding, scan, intelligence, and CBOM models
@@ -84,12 +84,12 @@ The main orchestration entry point is `backend/orchestration/pipeline.py`. Scann
 
 The source scanner is available through `backend/scanners/source/`. It combines:
 
-- Lexical algorithm detection.
-- API and library signature detection.
-- AST-based detection for supported languages.
-- Key-size extraction where the call site provides it.
-- Custom-crypto heuristics.
-- Source-file enumeration and language detection.
+* Lexical algorithm detection.
+* API and library signature detection.
+* AST-based detection for supported languages.
+* Key-size extraction where the call site provides it.
+* Custom-crypto heuristics.
+* Source-file enumeration and language detection.
 
 The API signature rules cover Python, JavaScript/TypeScript, Java, C/C++, and Go patterns. Detected cipher modes such as GCM, CBC, ECB, and CTR are stored only when the source evidence identifies the mode, using `finding.metadata["mode"]`. Generic AES, RSA, and hashing findings do not receive an invented mode.
 
@@ -107,13 +107,13 @@ Mode-aware binary signatures include AES-GCM, AES-CBC, AES-CTR, and AES-ECB. Mod
 
 `backend/scanners/dependency/` scans these manifest formats:
 
-- `package.json`
-- `requirements.txt`
-- `pyproject.toml`
-- `pom.xml`
-- `build.gradle`
-- `build.gradle.kts`
-- `CMakeLists.txt`
+* `package.json`
+* `requirements.txt`
+* `pyproject.toml`
+* `pom.xml`
+* `build.gradle`
+* `build.gradle.kts`
+* `CMakeLists.txt`
 
 Dependency findings identify cryptography-related libraries and versions. They do not claim that a particular algorithm is used; source-level usage must be established separately.
 
@@ -145,9 +145,10 @@ Every scanner emits the shared Pydantic model in `backend/schemas/finding.py`. I
 
 ## Requirements
 
-- Python 3.13 or a compatible modern Python version.
-- Git, when scanning a repository URL.
-- The dependencies listed in `backend/requirements.txt`.
+* Python 3.13 or a compatible modern Python version.
+* Git, when scanning a repository URL.
+* MongoDB.
+* The dependencies listed in `backend/requirements.txt`.
 
 The binary scanner uses `lief` and `pyelftools`; the source scanner uses Tree-sitter language packages; CBOM validation uses `jsonschema` and the repository's CycloneDX schema.
 
@@ -169,7 +170,7 @@ python3 -m venv backend/.venv
 backend/.venv/bin/python -m pip install -r backend/requirements.txt
 ```
 
-The SQLite database is created automatically at `backend/data/ecdat.db` when the backend persistence module is imported. The database is local prototype storage and is not committed as a required source artifact.
+Configure the MongoDB connection string in the environment according to the backend configuration.
 
 ## Run the API
 
@@ -207,17 +208,17 @@ The response is a persisted `ScanResult` containing the scan ID, status, target 
 
 ### Scan resources
 
-| Method | Endpoint | Description |
-| --- | --- | --- |
-| `POST` | `/scans` | Acquire a target, run the scan pipeline, and persist the result. |
-| `GET` | `/scans` | List stored scans, newest first. |
-| `GET` | `/scans/{scan_id}` | Return one stored scan. |
-| `DELETE` | `/scans/{scan_id}` | Delete one stored scan. |
-| `GET` | `/scans/{scan_id}/findings` | Return normalized findings. |
-| `GET` | `/scans/{scan_id}/risk` | Return intelligence and risk assessments. |
-| `GET` | `/scans/{scan_id}/recommendations` | Return migration recommendations. |
-| `GET` | `/scans/{scan_id}/cbom` | Return the generated CycloneDX CBOM. |
-| `GET` | `/scans/{scan_id}/report` | Return the complete persisted scan result. |
+| Method   | Endpoint                           | Description                                                      |
+| -------- | ---------------------------------- | ---------------------------------------------------------------- |
+| `POST`   | `/scans`                           | Acquire a target, run the scan pipeline, and persist the result. |
+| `GET`    | `/scans`                           | List stored scans, newest first.                                 |
+| `GET`    | `/scans/{scan_id}`                 | Return one stored scan.                                          |
+| `DELETE` | `/scans/{scan_id}`                 | Delete one stored scan.                                          |
+| `GET`    | `/scans/{scan_id}/findings`        | Return normalized findings.                                      |
+| `GET`    | `/scans/{scan_id}/risk`            | Return intelligence and risk assessments.                        |
+| `GET`    | `/scans/{scan_id}/recommendations` | Return migration recommendations.                                |
+| `GET`    | `/scans/{scan_id}/cbom`            | Return the generated CycloneDX CBOM.                             |
+| `GET`    | `/scans/{scan_id}/report`          | Return the complete persisted scan result.                       |
 
 Missing scan IDs return HTTP 404. Acquisition failures return HTTP 400, and unexpected scan failures return HTTP 500.
 
@@ -225,12 +226,12 @@ Missing scan IDs return HTTP 404. Acquisition failures return HTTP 400, and unex
 
 The CBOM generator in `backend/cbom/` produces a CycloneDX 1.7 document with:
 
-- Cryptographic-asset components.
-- Application and library components where applicable.
-- Algorithm properties such as primitive, family, parameter set, and mode when available.
-- Certificate properties for certificate findings.
-- Evidence properties including asset path, detection method, confidence, and source-finding identity.
-- Dependency relationships between applications, libraries, and cryptographic assets.
+* Cryptographic-asset components.
+* Application and library components where applicable.
+* Algorithm properties such as primitive, family, parameter set, and mode when available.
+* Certificate properties for certificate findings.
+* Evidence properties including asset path, detection method, confidence, and source-finding identity.
+* Dependency relationships between applications, libraries, and cryptographic assets.
 
 The schema used for validation is `backend/data/schemas/cyclonedx-1.7.schema.json`. Serialization uses CycloneDX JSON aliases such as `bomFormat`, `specVersion`, `bom-ref`, and `cryptoProperties`.
 
@@ -238,11 +239,11 @@ The schema used for validation is `backend/data/schemas/cyclonedx-1.7.schema.jso
 
 The intelligence layer consumes normalized findings and evaluates:
 
-- Classical algorithm and key-size risk.
-- Quantum-readiness status.
-- Mosca-style timing risk based on data lifetime, migration time, and CRQC arrival assumptions when supplied.
-- Detection confidence and business criticality inputs.
-- Migration priority and candidate post-quantum or hybrid algorithms.
+* Classical algorithm and key-size risk.
+* Quantum-readiness status.
+* Mosca-style timing risk based on data lifetime, migration time, and CRQC arrival assumptions when supplied.
+* Detection confidence and business criticality inputs.
+* Migration priority and candidate post-quantum or hybrid algorithms.
 
 The current scan request does not expose business-context fields, so default or unknown context values may be used during the automatic pipeline assessment. The assessment functions can accept business criticality and timing context when called directly by backend code.
 
@@ -266,16 +267,16 @@ The suite covers source, binary, container, dependency, certificate, normalizati
 
 ## Limitations
 
-- Static detection cannot guarantee discovery of proprietary, obfuscated, dynamically generated, or home-grown cryptography.
-- Dependency findings identify declared libraries, not confirmed algorithm usage.
-- Container findings identify library/package indicators from archive contents; the container is not executed.
-- Binary findings are based on static strings, symbols, and signatures and may not prove runtime use.
-- Local SQLite persistence is intended for the prototype and is not a production database configuration.
-- The scan API currently accepts local directories and Git repositories. It does not expose a general multipart upload endpoint.
-- The report endpoint returns the complete persisted `ScanResult`; a separate human-readable report file generator is not currently wired into the API.
+* Static detection cannot guarantee discovery of proprietary, obfuscated, dynamically generated, or home-grown cryptography.
+* Dependency findings identify declared libraries, not confirmed algorithm usage.
+* Container findings identify library/package indicators from archive contents; the container is not executed.
+* Binary findings are based on static strings, symbols, and signatures and may not prove runtime use.
+* MongoDB persistence is used for application and scan data.
+* The scan API currently accepts local directories and Git repositories. It does not expose a general multipart upload endpoint.
+* The report endpoint returns the complete persisted `ScanResult`; a separate human-readable report file generator is not currently wired into the API.
 
 ## Related Documentation
 
-- [Software Requirements Specification](docs/SRS.md)
-- [System Design](docs/SYSTEM_DESIGN.md)
-- [Team Work Division](docs/WORK_DIVISION.md)
+* [Software Requirements Specification](docs/SRS.md)
+* [System Design](docs/SYSTEM_DESIGN.md)
+* [Team Work Division](docs/WORK_DIVISION.md)
